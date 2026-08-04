@@ -1,0 +1,116 @@
+/* AnggotaGrup Page Styles */
+
+.anggota-card {
+  margin-bottom: var(--space-2);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.anggota-card:hover {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.anggota-back {
+  margin-bottom: var(--space-3);
+}
+
+.anggota-detail-streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: var(--space-3);
+  color: var(--color-accent-dark);
+  font-weight: var(--weight-semibold);
+}
+
+.anggota-history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.anggota-week {
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.anggota-week--expanded {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.anggota-week__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  gap: var(--space-3);
+  user-select: none;
+}
+
+.anggota-week__summary:hover {
+  background: var(--color-gray-50);
+}
+
+.anggota-week__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-primary);
+}
+
+.anggota-week__label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-gray-800);
+}
+
+.anggota-week__date {
+  font-size: var(--text-xs);
+  color: var(--color-gray-400);
+}
+
+.anggota-week__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.anggota-week__right svg {
+  color: var(--color-gray-400);
+}
+
+.anggota-week__pct {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  min-width: 40px;
+  text-align: right;
+}
+
+.anggota-week__pct--success { color: var(--color-success); }
+.anggota-week__pct--warning { color: var(--color-accent-dark); }
+.anggota-week__pct--danger { color: var(--color-danger); }
+
+.anggota-week__detail {
+  padding: 0 var(--space-4) var(--space-4);
+  border-top: 1px solid var(--color-gray-100);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.anggota-week__submitted {
+  font-size: 11px;
+  color: var(--color-gray-400);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-gray-100);
+}

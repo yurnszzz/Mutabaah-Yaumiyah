@@ -1,0 +1,174 @@
+/* Panduan & FAQ Page Styles */
+
+.panduan-sections,
+.panduan-faq {
+  margin-bottom: var(--space-6);
+}
+
+/* --- Guide Section Card --- */
+.panduan-section {
+  margin-bottom: var(--space-2);
+  overflow: hidden;
+}
+
+.panduan-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-4);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  color: var(--color-gray-500);
+}
+
+.panduan-section__header:hover {
+  background: var(--color-gray-50);
+}
+
+.panduan-section__header--active {
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+}
+
+.panduan-section__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.panduan-section__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.panduan-section__header--active .panduan-section__icon {
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+
+.panduan-section__title {
+  font-family: var(--font-heading);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  color: var(--color-gray-800);
+}
+
+.panduan-section__body {
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+/* --- Accordion Item --- */
+.accordion-item {
+  border-bottom: 1px solid var(--color-gray-100);
+}
+
+.accordion-item:last-child {
+  border-bottom: none;
+}
+
+.accordion-item__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-3) 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  gap: var(--space-3);
+  color: var(--color-gray-400);
+  transition: color var(--transition-fast);
+}
+
+.accordion-item__header:hover {
+  color: var(--color-primary);
+}
+
+.accordion-item--open .accordion-item__header {
+  color: var(--color-primary);
+}
+
+.accordion-item__question {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-gray-700);
+  line-height: var(--leading-normal);
+  flex: 1;
+}
+
+.accordion-item--open .accordion-item__question {
+  color: var(--color-primary-dark);
+}
+
+.accordion-item__header svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.accordion-item__body {
+  padding: 0 0 var(--space-3);
+  animation: fade-slide-in 200ms ease;
+}
+
+.accordion-item__body p {
+  font-size: var(--text-sm);
+  color: var(--color-gray-600);
+  line-height: var(--leading-relaxed);
+}
+
+@keyframes fade-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --- FAQ List --- */
+.panduan-faq__list {
+  padding: var(--space-3) var(--space-4);
+}
+
+/* --- Contact Card --- */
+.panduan-contact {
+  margin-bottom: var(--space-8);
+}
+
+.panduan-contact__inner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.panduan-contact__icon {
+  color: var(--color-secondary);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.panduan-contact__title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-gray-800);
+  margin-bottom: 2px;
+}
+
+.panduan-contact__desc {
+  font-size: var(--text-sm);
+  color: var(--color-gray-500);
+}
+
+

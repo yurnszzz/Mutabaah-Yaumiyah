@@ -1,0 +1,193 @@
+/* Leaderboard Page Styles */
+
+/* Mode Toggle */
+.lb-toggle {
+  display: flex;
+  gap: 2px;
+  background: var(--color-gray-100);
+  border-radius: var(--radius-lg);
+  padding: 3px;
+  margin-bottom: var(--space-4);
+}
+
+.lb-toggle__btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-gray-500);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.lb-toggle__btn--active {
+  background: var(--color-white);
+  color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+  font-weight: var(--weight-semibold);
+}
+
+/* My Rank Card */
+.lb-my-rank {
+  margin-bottom: var(--space-4);
+  border-left: 4px solid var(--color-primary);
+}
+
+.lb-my-rank .card__body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.lb-my-rank__label {
+  font-size: var(--text-xs);
+  color: var(--color-gray-400);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.lb-my-rank__main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: 4px;
+}
+
+.lb-my-rank__name {
+  font-weight: var(--weight-semibold);
+  color: var(--color-gray-800);
+}
+
+/* Leaderboard List */
+.lb-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--color-gray-50);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--color-gray-100);
+}
+
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-white);
+  transition: background var(--transition-fast);
+}
+
+.lb-row:hover {
+  background: var(--color-gray-50);
+}
+
+.lb-row--me {
+  background: hsl(var(--hue-primary), 95%, 97%);
+  border-left: 3px solid var(--color-primary);
+}
+
+.lb-row--top {
+  font-weight: var(--weight-medium);
+}
+
+.lb-row__rank {
+  width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lb-rank-icon--gold { color: #f59e0b; }
+.lb-rank-icon--silver { color: #9ca3af; }
+.lb-rank-icon--bronze { color: #b45309; }
+
+.lb-rank-num {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-gray-400);
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-gray-100);
+  border-radius: 50%;
+}
+
+.lb-row__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.lb-row__name {
+  font-size: var(--text-sm);
+  color: var(--color-gray-800);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lb-row__you {
+  font-size: 10px;
+  background: var(--color-primary);
+  color: var(--color-white);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  margin-left: var(--space-2);
+  font-weight: var(--weight-medium);
+}
+
+.lb-row__badge {
+  font-size: 10px;
+  color: var(--color-gray-400);
+  background: var(--color-gray-100);
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  text-transform: capitalize;
+  flex-shrink: 0;
+}
+
+.lb-row__value {
+  flex-shrink: 0;
+}
+
+/* Value display */
+.lb-value {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  color: var(--color-accent-dark);
+}
+
+.lb-value__icon {
+  color: var(--color-accent-dark);
+}
+
+.lb-value__unit {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-normal);
+  color: var(--color-gray-400);
+}
+
+.lb-value--success { color: var(--color-success); }
+.lb-value--warning { color: var(--color-accent-dark); }
+.lb-value--danger { color: var(--color-danger); }
+
+.lb-value__pct {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+}

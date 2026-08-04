@@ -1,0 +1,520 @@
+/* ============================================
+   Input Mutabaah Page Styles
+   Mobile-first (360px-430px primary)
+   ============================================ */
+
+.input-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-bottom: var(--space-8);
+}
+
+/* --- Overall Progress Card --- */
+.overall-progress {
+  margin-bottom: var(--space-3);
+}
+
+.overall-progress__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+  gap: var(--space-3);
+}
+
+.overall-progress__label {
+  font-size: var(--text-xs);
+  color: var(--color-gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: var(--weight-medium);
+}
+
+.overall-progress__value {
+  font-family: var(--font-heading);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-extrabold);
+  color: var(--color-gray-900);
+  line-height: 1;
+  margin-top: var(--space-1);
+}
+
+.overall-progress__badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent-bg);
+  color: var(--color-accent-dark);
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+}
+
+/* --- Section Toggle (Collapsible) --- */
+.input-section {
+  overflow: hidden;
+}
+
+.section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--space-4);
+  background: none;
+  text-align: left;
+  gap: var(--space-3);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.section-toggle:hover {
+  background: var(--color-gray-50);
+}
+
+.section-toggle__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  flex: 1;
+}
+
+.section-toggle__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.section-toggle__title {
+  font-family: var(--font-heading);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  color: var(--color-gray-800);
+  line-height: 1.2;
+}
+
+.section-toggle__subtitle {
+  font-size: 11px;
+  color: var(--color-gray-400);
+  margin-top: 2px;
+}
+
+.section-toggle__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-gray-400);
+  flex-shrink: 0;
+}
+
+/* --- Progress Indicator --- */
+.input-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.input-progress .progress {
+  width: 48px;
+  height: 5px;
+}
+
+.input-progress__text {
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  min-width: 30px;
+  text-align: right;
+}
+
+.input-progress__text--success { color: var(--color-success); }
+.input-progress__text--warning { color: var(--color-accent-dark); }
+.input-progress__text--danger { color: var(--color-danger); }
+
+/* --- Input Hint --- */
+.input-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-gray-400);
+  margin-bottom: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-gray-50);
+  border-radius: var(--radius-sm);
+}
+
+/* --- Shalat Grid (7x5) --- */
+.shalat-section {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.shalat-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.shalat-info__count {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-gray-700);
+}
+
+.shalat-grid {
+  display: grid;
+  gap: 3px;
+  min-width: 300px;
+}
+
+.shalat-grid__header {
+  display: grid;
+  grid-template-columns: 56px repeat(7, 1fr);
+  gap: 3px;
+}
+
+.shalat-grid__corner {
+  /* empty top-left cell */
+}
+
+.shalat-grid__day-label {
+  text-align: center;
+  font-size: 10px;
+  font-weight: var(--weight-semibold);
+  color: var(--color-gray-500);
+  padding: 4px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.shalat-grid__row {
+  display: grid;
+  grid-template-columns: 56px repeat(7, 1fr);
+  gap: 3px;
+}
+
+.shalat-grid__waktu-label {
+  font-size: 11px;
+  font-weight: var(--weight-medium);
+  color: var(--color-gray-600);
+  display: flex;
+  align-items: center;
+  padding-right: var(--space-1);
+}
+
+.shalat-grid__cell {
+  aspect-ratio: 1;
+  min-width: 32px;
+  min-height: 32px;
+  max-width: 40px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--color-gray-200);
+  background: var(--color-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  color: transparent;
+}
+
+.shalat-grid__cell:hover {
+  border-color: var(--color-gray-300);
+  background: var(--color-gray-50);
+}
+
+.shalat-grid__cell--active {
+  background: var(--color-success);
+  border-color: var(--color-success);
+  color: var(--color-white);
+}
+
+.shalat-grid__cell--active:hover {
+  background: var(--color-success-light);
+  border-color: var(--color-success-light);
+}
+
+/* --- Jamaah Grid Variants --- */
+.jamaah-grid__cell--jamaah {
+  background: var(--color-success);
+  border-color: var(--color-success);
+  color: var(--color-white);
+}
+
+.jamaah-grid__cell--munfarid {
+  background: var(--color-accent-bg);
+  border-color: var(--color-accent);
+  color: var(--color-accent-dark);
+}
+
+/* --- Jamaah Legend --- */
+.jamaah-legend {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.jamaah-legend__item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: var(--weight-medium);
+}
+
+.jamaah-legend__item--jamaah { color: #15803d; }
+.jamaah-legend__item--munfarid { color: var(--color-accent-dark); }
+.jamaah-legend__item--tidak { color: var(--color-gray-400); }
+
+/* --- Number Input --- */
+.number-input {
+  margin-bottom: var(--space-4);
+}
+
+.number-input__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.number-input__label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-gray-700);
+}
+
+.number-input__info {
+  font-size: 11px;
+  color: var(--color-gray-400);
+  font-weight: var(--weight-medium);
+}
+
+.number-input__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.number-input__btn {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  background: var(--color-gray-100);
+  color: var(--color-gray-600);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.number-input__btn:hover:not(:disabled) {
+  background: var(--color-primary-bg);
+  color: var(--color-primary);
+}
+
+.number-input__btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.number-input__field {
+  width: 60px;
+  height: 44px;
+  text-align: center;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--color-gray-800);
+  border: 1.5px solid var(--color-gray-200);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+}
+
+.number-input__field:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-bg);
+}
+
+/* Remove spinner from number input */
+.number-input__field::-webkit-inner-spin-button,
+.number-input__field::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.number-input__field[type='number'] {
+  -moz-appearance: textfield;
+}
+
+.number-input__unit {
+  font-size: var(--text-xs);
+  color: var(--color-gray-400);
+  margin-top: var(--space-1);
+  display: block;
+  text-align: center;
+}
+
+/* --- Tilawah --- */
+.tilawah-inputs {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.tilawah-inputs .number-input {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.tilawah-plus {
+  padding-top: 28px;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--color-gray-400);
+}
+
+.tilawah-total {
+  font-size: var(--text-xs);
+  color: var(--color-gray-500);
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-secondary-bg);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+/* --- Amalan Grid --- */
+.amalan-grid {
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Kehadiran --- */
+.kehadiran-options {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.kehadiran-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: var(--space-3) var(--space-2);
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--color-gray-200);
+  background: var(--color-white);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.kehadiran-btn:hover {
+  border-color: var(--color-gray-300);
+  background: var(--color-gray-50);
+}
+
+.kehadiran-btn__short {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-extrabold);
+  font-family: var(--font-heading);
+}
+
+.kehadiran-btn__label {
+  font-size: 10px;
+  font-weight: var(--weight-medium);
+  color: var(--color-gray-500);
+}
+
+.kehadiran-btn--active {
+  border-width: 2px;
+}
+
+.kehadiran-btn--success {
+  border-color: var(--color-success);
+  background: var(--color-success-bg);
+  color: #15803d;
+}
+.kehadiran-btn--success .kehadiran-btn__label { color: #15803d; }
+
+.kehadiran-btn--info {
+  border-color: var(--color-secondary);
+  background: var(--color-secondary-bg);
+  color: var(--color-secondary-dark);
+}
+.kehadiran-btn--info .kehadiran-btn__label { color: var(--color-secondary-dark); }
+
+.kehadiran-btn--warning {
+  border-color: var(--color-accent);
+  background: var(--color-accent-bg);
+  color: var(--color-accent-dark);
+}
+.kehadiran-btn--warning .kehadiran-btn__label { color: var(--color-accent-dark); }
+
+.kehadiran-btn--danger {
+  border-color: var(--color-danger);
+  background: var(--color-danger-bg);
+  color: #b91c1c;
+}
+.kehadiran-btn--danger .kehadiran-btn__label { color: #b91c1c; }
+
+.terlambat-input {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-gray-100);
+}
+
+.terlambat-input .form-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.terlambat-input .form-input {
+  max-width: 120px;
+}
+
+/* --- Submit --- */
+.submit-section {
+  margin-top: var(--space-4);
+  padding: 0 var(--space-1);
+}
+
+.submit-success {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-success-bg);
+  color: #15803d;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  animation: toast-in 300ms ease;
+}
+
+/* --- Desktop enhancements --- */
+@media (min-width: 768px) {
+  .shalat-grid__cell {
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  .tilawah-inputs {
+    max-width: 360px;
+  }
+}
