@@ -85,15 +85,15 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  // Manual registration: nama + email + password + role + tingkatan + namaPembina
-  const registerWithPassword = useCallback(async (nama, email, password, role, tingkatan, namaPembina) => {
+  // Manual registration: nama + email + password + role + tingkatan + namaPembina + gender
+  const registerWithPassword = useCallback(async (nama, email, password, role, tingkatan, namaPembina, gender) => {
     setIsLoading(true)
     setError(null)
     setSuccessMessage(null)
 
     try {
       if (isApiConfigured()) {
-        const result = await apiRegister(email, nama, password, role, tingkatan, namaPembina)
+        const result = await apiRegister(email, nama, password, role, tingkatan, namaPembina, gender)
         if (result && result.user) {
           setUser(setUserData(result.user))
           setSuccessMessage(result.message || 'Pendaftaran berhasil!')

@@ -40,6 +40,7 @@ function createUser(data) {
     '[]', // badges
     data.noWhatsapp || '',
     now,
+    data.gender || 'ikhwan',
   ]);
 
   // If pembina, update group
@@ -58,6 +59,7 @@ function createUser(data) {
       tingkatan: data.tingkatan || 'muda',
       grup_id: data.grupId || '',
       status: 'aktif',
+      gender: data.gender || 'ikhwan',
     }
   };
 }
@@ -263,6 +265,7 @@ function registerSelf(data) {
     '[]',   // badges
     data.noWhatsapp || '',
     now,
+    data.gender || 'ikhwan',
   ]);
 
   CacheService.getScriptCache().remove('user_' + data.email);
@@ -279,6 +282,7 @@ function registerSelf(data) {
       grup_id: grupId,
       grup_nama: grupNama,
       status: 'aktif',
+      gender: data.gender || 'ikhwan',
     }
   };
 }
@@ -754,4 +758,124 @@ function getLeaderboard(mode, tahun, pekan) {
     total: users.length,
     leaderboard: users
   };
+}
+
+// ============ Group Management (Admin) ============
+
+/**
+ * Create a new group
+ */
+function createGroup(data) {
+  if (!data.nama_grup) return { error: 'Nama grup diperlukan' };
+
+  var groupSheet = getSheet('groups');
+  ensureGroupHeaders(groupSheet);
+
+  var grupId = 'grp_' + Utilities.getUuid().substring(0, 8);
+  var now = new Date().toISOString();
+
+  groupSheet.appendRow([grupId, data.nama_grup, data.pembina_user_id || '', now]);
+
+  return { message: 'Grup "' + data.nama_grup + '" berhasil dibuat', grup_id: grupId };
+}
+
+/**
+ * Update group name/pembina
+ */
+function updateGroup(data) {
+  if (!data.grup_id) return { error: 'grup_id diperlukan' };
+
+  var groupSheet = getSheet('groups');
+  ensureGroupHeaders(groupSheet);
+  var allData = groupSheet.getDataRange().getValues();
+  var headers = allData[0];
+  var idCol = headers.indexOf('grup_id');
+  var namaCol = headers.indexOf('nama_grup');
+  var pembinaCol = headers.indexOf('pembina_user_id');
+
+  for (var i = 1; i < allData.length; i++) {
+    if (allData[i][idCol] === data.grup_id) {
+      if (data.nama_grup) groupSheet.getRange(i + 1, namaCol + 1).setValue(data.nama_grup);
+      if (data.pembina_user_id !== undefined) groupSheet.getRange(i + 1, pembinaCol + 1).setValue(data.pembina_user_id);
+      return { message: 'Grup berhasil diperbarui' };
+    }
+  }
+  return { error: 'Grup tidak ditemukan' };
+}
+
+/**
+ * Delete a group (unassign all members)
+ */
+function deleteGroup(data) {
+  if (!data.grup_id) return { error: 'grup_id diperlukan' };
+
+  // Unassign all members
+  var userSheet = getSheet('users');
+  var userData = userSheet.getDataRange().getValues();
+  var uHeaders = userData[0];
+  var grupCol = uHeaders.indexOf('grup_id');
+
+  for (var i = 1; i < userData.length; i++) {
+    if (userData[i][grupCol] === data.grup_id) {
+      userSheet.getRange(i + 1, grupCol + 1).setValue('');
+    }
+  }
+
+  // Delete group row
+  var groupSheet = getSheet('groups');
+  ensureGroupHeaders(groupSheet);
+  var gData = groupSheet.getDataRange().getValues();
+  var gHeaders = gData[0];
+  var gIdCol = gHeaders.indexOf('grup_id');
+
+  for (var j = gData.length - 1; j >= 1; j--) {
+    if (gData[j][gIdCol] === data.grup_id) {
+      groupSheet.deleteRow(j + 1);
+      break;
+    }
+  }
+
+  return { message: 'Grup berhasil dihapus' };
+}
+
+/**
+ * Add member to group
+ */
+function addMemberToGroup(data) {
+  if (!data.grup_id || !data.user_id) return { error: 'grup_id dan user_id diperlukan' };
+
+  var sheet = getSheet('users');
+  var allData = sheet.getDataRange().getValues();
+  var headers = allData[0];
+  var idCol = headers.indexOf('user_id');
+  var grupCol = headers.indexOf('grup_id');
+
+  for (var i = 1; i < allData.length; i++) {
+    if (allData[i][idCol] === data.user_id) {
+      sheet.getRange(i + 1, grupCol + 1).setValue(data.grup_id);
+      return { message: 'Anggota berhasil ditambahkan ke grup' };
+    }
+  }
+  return { error: 'User tidak ditemukan' };
+}
+
+/**
+ * Remove member from group
+ */
+function removeMemberFromGroup(data) {
+  if (!data.user_id) return { error: 'user_id diperlukan' };
+
+  var sheet = getSheet('users');
+  var allData = sheet.getDataRange().getValues();
+  var headers = allData[0];
+  var idCol = headers.indexOf('user_id');
+  var grupCol = headers.indexOf('grup_id');
+
+  for (var i = 1; i < allData.length; i++) {
+    if (allData[i][idCol] === data.user_id) {
+      sheet.getRange(i + 1, grupCol + 1).setValue('');
+      return { message: 'Anggota berhasil dikeluarkan dari grup' };
+    }
+  }
+  return { error: 'User tidak ditemukan' };
 }

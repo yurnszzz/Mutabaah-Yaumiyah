@@ -762,3 +762,290 @@ ul, ol { list-style: none; }
     --content-padding: var(--space-8);
   }
 }
+
+/* ============ Modal Dialog ============ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--color-white);
+  border-radius: var(--radius-2xl);
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+  width: min(480px, 92vw);
+  max-height: 85vh;
+  overflow-y: auto;
+  z-index: 1001;
+  animation: slideUp 0.25s ease;
+}
+
+.modal-dialog--wide {
+  width: min(600px, 92vw);
+}
+
+.modal-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-gray-200);
+}
+
+.modal-dialog__header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-gray-800);
+  margin: 0;
+}
+
+.modal-dialog__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-md);
+  color: var(--color-gray-400);
+  transition: all 0.15s ease;
+}
+.modal-dialog__close:hover {
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
+.modal-dialog__body {
+  padding: var(--space-5);
+}
+
+.modal-dialog__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  border-top: 1px solid var(--color-gray-200);
+}
+
+/* ============ Role Selector ============ */
+.role-selector {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.role-selector__option {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 2px solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  background: var(--color-white);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+.role-selector__option:hover {
+  border-color: var(--color-primary-light);
+  background: var(--color-primary-bg);
+}
+.role-selector__option--active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-bg);
+  box-shadow: 0 0 0 3px var(--color-primary-bg-hover);
+}
+.role-selector__option--current {
+  position: relative;
+}
+
+.role-selector__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.role-selector__desc {
+  font-size: 12px;
+  color: var(--color-gray-500);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* ============ Bulk Check Button ============ */
+.bulk-check-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-full);
+  background: var(--color-white);
+  color: var(--color-gray-600);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.bulk-check-btn:hover {
+  border-color: var(--color-success);
+  color: var(--color-success);
+  background: var(--color-success-bg);
+}
+.bulk-check-btn--active {
+  border-color: var(--color-danger-light);
+  color: var(--color-danger);
+}
+.bulk-check-btn--active:hover {
+  border-color: var(--color-danger);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.shalat-grid__waktu-label--clickable {
+  cursor: pointer;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: inherit;
+  color: inherit;
+  font-weight: inherit;
+  padding: 0;
+  transition: color 0.15s ease;
+}
+.shalat-grid__waktu-label--clickable:hover {
+  color: var(--color-primary);
+}
+.shalat-grid__waktu-label--all {
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.shalat-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* ============ Form Group ============ */
+.form-group {
+  margin-bottom: var(--space-4);
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
+/* ============ Member List ============ */
+.member-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.member-list__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--color-gray-50);
+  border: 1px solid var(--color-gray-200);
+}
+
+.member-list__info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.member-list__info strong {
+  font-size: 13px;
+  color: var(--color-gray-800);
+}
+
+.member-list__email {
+  font-size: 11px;
+  color: var(--color-gray-400);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.add-member-section {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-gray-200);
+}
+
+.add-member-section__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-gray-600);
+  margin: 0 0 var(--space-3);
+}
+
+/* ============ Group Card Actions ============ */
+.admin-grup-card__actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-gray-100);
+  flex-wrap: wrap;
+}
+
+/* ============ Print Styles ============ */
+@media print {
+  /* Hide everything except the rapor card */
+  body * {
+    visibility: hidden;
+  }
+  .rapor-card, .rapor-card * {
+    visibility: visible;
+  }
+  .rapor-card {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    box-shadow: none;
+    border: none;
+    margin: 0;
+    padding: 20px;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .sidebar, .bottom-nav, .app-sidebar {
+    display: none !important;
+  }
+  .app-main {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
+
+/* ============ Animations ============ */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translate(-50%, -48%); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}

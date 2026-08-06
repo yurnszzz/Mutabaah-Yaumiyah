@@ -185,6 +185,23 @@ function doPost(e) {
         result = updateTicketStatus(data);
         break;
 
+      // Group Management
+      case 'createGroup':
+        result = createGroup(data);
+        break;
+      case 'updateGroup':
+        result = updateGroup(data);
+        break;
+      case 'deleteGroup':
+        result = deleteGroup(data);
+        break;
+      case 'addMemberToGroup':
+        result = addMemberToGroup(data);
+        break;
+      case 'removeMemberFromGroup':
+        result = removeMemberFromGroup(data);
+        break;
+
       default:
         result = { error: 'Action tidak dikenal: ' + action };
     }

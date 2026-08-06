@@ -49,17 +49,40 @@ function SectionHeader({ icon: Icon, title, subtitle, percentage, isOpen, onTogg
   )
 }
 
-function SholatFarduGrid({ data, onChange }) {
+function SholatFarduGrid({ data, onChange, onCheckAllRow, onCheckAllGrid }) {
   const total = useMemo(() => {
     let count = 0
     HARI.forEach(h => WAKTU_SHALAT.forEach(w => { if (data[h]?.[w]) count++ }))
     return count
   }, [data])
 
+  function isRowAllChecked(waktu) {
+    return HARI.every(h => data[h]?.[waktu])
+  }
+
+  function toggleRow(waktu) {
+    const allChecked = isRowAllChecked(waktu)
+    HARI.forEach(h => onChange(h, waktu, !allChecked))
+  }
+
+  function toggleAll() {
+    const allChecked = total === 35
+    HARI.forEach(h => WAKTU_SHALAT.forEach(w => onChange(h, w, !allChecked)))
+  }
+
   return (
     <div className="shalat-section">
       <div className="shalat-info">
         <span className="shalat-info__count">{total}/35 waktu</span>
+        <button
+          type="button"
+          className={`bulk-check-btn ${total === 35 ? 'bulk-check-btn--active' : ''}`}
+          onClick={toggleAll}
+          title={total === 35 ? 'Hapus centang semua' : 'Centang semua'}
+        >
+          <Check size={12} strokeWidth={3} />
+          {total === 35 ? 'Batal Semua' : 'Centang Semua'}
+        </button>
       </div>
       <div className="shalat-grid" role="grid">
         <div className="shalat-grid__header">
@@ -68,30 +91,41 @@ function SholatFarduGrid({ data, onChange }) {
             <div key={h} className="shalat-grid__day-label">{h}</div>
           ))}
         </div>
-        {WAKTU_SHALAT.map(waktu => (
-          <div key={waktu} className="shalat-grid__row" role="row">
-            <div className="shalat-grid__waktu-label">{waktu}</div>
-            {HARI.map((hari, idx) => {
-              const checked = data[hari]?.[waktu] || false
-              return (
-                <button
-                  key={`${hari}-${waktu}`}
-                  type="button"
-                  role="gridcell"
-                  className={`shalat-grid__cell ${checked ? 'shalat-grid__cell--active' : ''}`}
-                  onClick={() => onChange(hari, waktu, !checked)}
-                  aria-label={`${waktu} ${HARI_SHORT[idx]} - ${checked ? 'sudah' : 'belum'}`}
-                >
-                  {checked ? <Check size={14} strokeWidth={3} /> : null}
-                </button>
-              )
-            })}
-          </div>
-        ))}
+        {WAKTU_SHALAT.map(waktu => {
+          const rowAll = isRowAllChecked(waktu)
+          return (
+            <div key={waktu} className="shalat-grid__row" role="row">
+              <button
+                type="button"
+                className={`shalat-grid__waktu-label shalat-grid__waktu-label--clickable ${rowAll ? 'shalat-grid__waktu-label--all' : ''}`}
+                onClick={() => toggleRow(waktu)}
+                title={rowAll ? `Hapus centang semua ${waktu}` : `Centang semua ${waktu}`}
+              >
+                {waktu}
+              </button>
+              {HARI.map((hari, idx) => {
+                const checked = data[hari]?.[waktu] || false
+                return (
+                  <button
+                    key={`${hari}-${waktu}`}
+                    type="button"
+                    role="gridcell"
+                    className={`shalat-grid__cell ${checked ? 'shalat-grid__cell--active' : ''}`}
+                    onClick={() => onChange(hari, waktu, !checked)}
+                    aria-label={`${waktu} ${HARI_SHORT[idx]} - ${checked ? 'sudah' : 'belum'}`}
+                  >
+                    {checked ? <Check size={14} strokeWidth={3} /> : null}
+                  </button>
+                )
+              })}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
 }
+
 
 function BerjamaahGrid({ data, onChange }) {
   const total = useMemo(() => {

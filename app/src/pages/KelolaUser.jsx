@@ -7,12 +7,17 @@ import {
 } from '../services/api'
 import {
   Users, Search, Trash2, Shield, Loader2, AlertCircle,
-  CheckCircle, RefreshCw
+  CheckCircle, RefreshCw, X
 } from 'lucide-react'
 import './DashboardAdmin.css'
 
 const ROLE_LABELS = { anggota: 'Anggota', pembina: 'Pembina', yayasan: 'Yayasan' }
 const ROLE_COLORS = { anggota: 'primary', pembina: 'secondary', yayasan: 'warning' }
+const ROLE_OPTIONS = [
+  { value: 'anggota', label: 'Anggota', desc: 'Peserta mutabaah — input & lihat data pribadi' },
+  { value: 'pembina', label: 'Pembina', desc: 'Pembina grup — monitor anggota & evaluasi' },
+  { value: 'yayasan', label: 'Yayasan', desc: 'Admin — kelola seluruh user, grup, & sistem' },
+]
 
 export default function KelolaUser() {
   const [users, setUsers] = useState([])
@@ -20,6 +25,8 @@ export default function KelolaUser() {
   const [search, setSearch] = useState('')
   const [actionLoading, setActionLoading] = useState(null)
   const [message, setMessage] = useState(null)
+  const [roleModal, setRoleModal] = useState(null)
+  const [selectedRole, setSelectedRole] = useState('')
 
   useEffect(() => { loadUsers() }, [])
 
@@ -68,25 +75,32 @@ export default function KelolaUser() {
     }
   }
 
-  async function handleChangeRole(userId, currentRole) {
-    const roles = ['anggota', 'pembina', 'yayasan']
-    const nextRole = roles[(roles.indexOf(currentRole) + 1) % roles.length]
-    if (!confirm(`Ubah role menjadi "${ROLE_LABELS[nextRole]}"?`)) return
+  function openRoleModal(userId, nama, currentRole) {
+    setRoleModal({ userId, nama, currentRole })
+    setSelectedRole(currentRole)
+  }
 
+  async function confirmRoleChange() {
+    if (!roleModal || selectedRole === roleModal.currentRole) {
+      setRoleModal(null)
+      return
+    }
+    const { userId } = roleModal
     setActionLoading(userId)
     setMessage(null)
+    setRoleModal(null)
     try {
       if (isApiConfigured()) {
-        const result = await apiUpdateUserRole(userId, nextRole)
+        const result = await apiUpdateUserRole(userId, selectedRole)
         if (result?.message) {
           setMessage({ type: 'success', text: result.message })
-          setUsers(prev => prev.map(u => u.user_id === userId ? { ...u, role: nextRole } : u))
+          setUsers(prev => prev.map(u => u.user_id === userId ? { ...u, role: selectedRole } : u))
         } else {
           setMessage({ type: 'error', text: result?.error || 'Gagal mengubah role' })
         }
       } else {
-        setUsers(prev => prev.map(u => u.user_id === userId ? { ...u, role: nextRole } : u))
-        setMessage({ type: 'success', text: `Role diubah ke ${ROLE_LABELS[nextRole]} (demo)` })
+        setUsers(prev => prev.map(u => u.user_id === userId ? { ...u, role: selectedRole } : u))
+        setMessage({ type: 'success', text: `Role diubah ke ${ROLE_LABELS[selectedRole]} (demo)` })
       }
     } catch (err) {
       setMessage({ type: 'error', text: err.message })
@@ -111,7 +125,6 @@ export default function KelolaUser() {
         <p className="page-header__subtitle">{users.length} user terdaftar</p>
       </div>
 
-      {/* Search + Refresh */}
       <div className="admin-search">
         <input
           type="text"
@@ -125,7 +138,6 @@ export default function KelolaUser() {
         </button>
       </div>
 
-      {/* Message */}
       {message && (
         <div className={`login-${message.type === 'success' ? 'success' : 'error'}`} style={{ marginBottom: 'var(--space-4)' }}>
           {message.type === 'success' && <CheckCircle size={14} />}
@@ -173,7 +185,7 @@ export default function KelolaUser() {
                       <div className="admin-table__actions">
                         <button
                           className="admin-table__btn admin-table__btn--edit"
-                          onClick={() => handleChangeRole(u.user_id, u.role)}
+                          onClick={() => openRoleModal(u.user_id, u.nama, u.role)}
                           disabled={actionLoading === u.user_id}
                           title="Ubah role"
                         >
@@ -202,6 +214,54 @@ export default function KelolaUser() {
           <Search size={32} className="admin-empty__icon" />
           <p>Tidak ada user yang cocok dengan pencarian</p>
         </div>
+      )}
+
+      {/* Role Change Modal */}
+      {roleModal && (
+        <>
+          <div className="modal-overlay" onClick={() => setRoleModal(null)} />
+          <div className="modal-dialog">
+            <div className="modal-dialog__header">
+              <h3>Ubah Role</h3>
+              <button className="modal-dialog__close" onClick={() => setRoleModal(null)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="modal-dialog__body">
+              <p style={{ marginBottom: 'var(--space-3)', color: 'var(--color-gray-600)', fontSize: '14px' }}>
+                Pilih role baru untuk <strong>{roleModal.nama}</strong>:
+              </p>
+              <div className="role-selector">
+                {ROLE_OPTIONS.map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    className={`role-selector__option ${selectedRole === opt.value ? 'role-selector__option--active' : ''} ${roleModal.currentRole === opt.value ? 'role-selector__option--current' : ''}`}
+                    onClick={() => setSelectedRole(opt.value)}
+                  >
+                    <div className="role-selector__header">
+                      <span className={`badge badge--${ROLE_COLORS[opt.value]} badge--sm`}>{opt.label}</span>
+                      {roleModal.currentRole === opt.value && (
+                        <span style={{ fontSize: '10px', color: 'var(--color-gray-400)' }}>saat ini</span>
+                      )}
+                    </div>
+                    <p className="role-selector__desc">{opt.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="modal-dialog__footer">
+              <button className="btn btn--outline btn--sm" onClick={() => setRoleModal(null)}>Batal</button>
+              <button
+                className="btn btn--primary btn--sm"
+                onClick={confirmRoleChange}
+                disabled={selectedRole === roleModal.currentRole}
+              >
+                Simpan Perubahan
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   )

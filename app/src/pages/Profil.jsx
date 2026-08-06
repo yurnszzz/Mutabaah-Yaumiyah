@@ -189,6 +189,10 @@ export default function Profil() {
               <Mail size={16} />
               <span>{user?.email || '-'}</span>
             </div>
+            <div className="profil-detail">
+              <User size={16} />
+              <span>{user?.gender === 'akhwat' ? '♀ Akhwat' : '♂ Ikhwan'}</span>
+            </div>
             {user?.grup_nama && (
               <div className="profil-detail">
                 <Users size={16} />

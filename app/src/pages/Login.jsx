@@ -135,6 +135,7 @@ export default function Login() {
   const [nama, setNama] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [role, setRole] = useState('anggota')
+  const [gender, setGender] = useState('ikhwan') // 'ikhwan' | 'akhwat'
   const [namaPembina, setNamaPembina] = useState('')
   const [gelarPembina, setGelarPembina] = useState('Ust.')
   const [gelarSelf, setGelarSelf] = useState('Ust.') // gelar for pembina's own name
@@ -225,7 +226,8 @@ export default function Login() {
       password,
       role,
       null,
-      role === 'anggota' ? fullPembinaName : null
+      role === 'anggota' ? fullPembinaName : null,
+      gender
     )
   }
 
@@ -406,6 +408,29 @@ export default function Login() {
                     required
                     autoComplete="email"
                   />
+                </div>
+
+                {/* Gender selector */}
+                <div className="login-form__gender">
+                  <label className="login-form__gender-label">Jenis Kelamin:</label>
+                  <div className="login-form__gender-options">
+                    <button
+                      type="button"
+                      className={`login-form__gender-btn ${gender === 'ikhwan' ? 'login-form__gender-btn--active' : ''}`}
+                      onClick={() => { setGender('ikhwan'); setGelarPembina('Ust.'); setGelarSelf('Ust.') }}
+                      disabled={isLoading}
+                    >
+                      ♂ Ikhwan
+                    </button>
+                    <button
+                      type="button"
+                      className={`login-form__gender-btn ${gender === 'akhwat' ? 'login-form__gender-btn--active login-form__gender-btn--akhwat' : ''}`}
+                      onClick={() => { setGender('akhwat'); setGelarPembina('Ustadzah'); setGelarSelf('Ustadzah') }}
+                      disabled={isLoading}
+                    >
+                      ♀ Akhwat
+                    </button>
+                  </div>
                 </div>
 
                 {/* Role dropdown */}
