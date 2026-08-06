@@ -77,15 +77,6 @@ function doGet(e) {
       case 'getAdminStats':
         result = getAdminStats();
         break;
-      case 'getGrupAnggota':
-        result = getGrupAnggota(e.parameter.grupId);
-        break;
-      case 'getGrupRekap':
-        result = getGrupRekap(e.parameter.grupId, e.parameter.tahun, e.parameter.pekan);
-        break;
-      case 'getAllGrupRekap':
-        result = getAllGrupRekap(e.parameter.tahun, e.parameter.pekan);
-        break;
 
       // Helpdesk
       case 'getMyTickets':
