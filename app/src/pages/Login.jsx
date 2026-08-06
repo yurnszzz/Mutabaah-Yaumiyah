@@ -135,6 +135,7 @@ export default function Login() {
   const [nama, setNama] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [role, setRole] = useState('anggota')
+  const [tingkatan, setTingkatan] = useState('muda') // 'muda' | 'pratama'
   const [gender, setGender] = useState('ikhwan') // 'ikhwan' | 'akhwat'
   const [namaPembina, setNamaPembina] = useState('')
   const [gelarPembina, setGelarPembina] = useState('Ust.')
@@ -220,12 +221,15 @@ export default function Login() {
       return
     }
 
+    // Pembina always uses 'pratama' target
+    const finalTingkatan = role === 'pembina' ? 'pratama' : tingkatan
+
     registerWithPassword(
       finalNama,
       email.trim(),
       password,
       role,
-      null,
+      finalTingkatan,
       role === 'anggota' ? fullPembinaName : null,
       gender
     )
@@ -447,6 +451,43 @@ export default function Login() {
                   </select>
                   <ChevronDown size={16} className="login-form__chevron" />
                 </div>
+
+                {/* Tingkatan selector (anggota only) */}
+                {role === 'anggota' && (
+                  <div className="login-form__gender">
+                    <label className="login-form__gender-label">Jenjang Anggota:</label>
+                    <div className="login-form__gender-options">
+                      <button
+                        type="button"
+                        className={`login-form__gender-btn ${tingkatan === 'muda' ? 'login-form__gender-btn--active' : ''}`}
+                        onClick={() => setTingkatan('muda')}
+                        disabled={isLoading}
+                      >
+                        🌱 Muda
+                      </button>
+                      <button
+                        type="button"
+                        className={`login-form__gender-btn ${tingkatan === 'pratama' ? 'login-form__gender-btn--active' : ''}`}
+                        onClick={() => setTingkatan('pratama')}
+                        disabled={isLoading}
+                      >
+                        ⭐ Pratama
+                      </button>
+                    </div>
+                    <p className="login-form__hint" style={{ marginTop: '4px' }}>
+                      {tingkatan === 'muda'
+                        ? 'Target: Jamaah 14x, Tilawah 1 juz, Shaum 1x/bulan'
+                        : 'Target: Jamaah 21x, Tilawah 3.5 juz, Shaum 2x/bulan'}
+                    </p>
+                  </div>
+                )}
+
+                {/* Info for pembina: always Pratama target */}
+                {role === 'pembina' && (
+                  <p className="login-form__hint" style={{ background: 'var(--color-info-bg)', padding: '8px 12px', borderRadius: 'var(--radius-md)' }}>
+                    ℹ️ Pembina menggunakan target capaian jenjang <strong>Pratama</strong> secara default.
+                  </p>
+                )}
 
                 {/* Gelar selector for PEMBINA's own name */}
                 {role === 'pembina' && (

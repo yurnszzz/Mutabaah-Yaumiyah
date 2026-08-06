@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { TARGET_AMALAN } from '../config/constants'
+import { TARGET_AMALAN, getEffectiveTingkatan } from '../config/constants'
 import {
   getGrupAnggota as apiGetGrupAnggota,
   getMemberMutabaah as apiGetMemberMutabaah,
@@ -27,7 +27,7 @@ export default function AnggotaGrup() {
 
   const grupId = user?.grup_id
   const grupNama = user?.grup_nama || user?.nama || 'Grup Saya'
-  const tingkatan = 'muda' // default for rendering bars
+  const tingkatan = 'muda' // fallback, member-specific tingkatan used when available
 
   useEffect(() => { loadMembers() }, [grupId])
 

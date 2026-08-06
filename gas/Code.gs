@@ -63,6 +63,9 @@ function doGet(e) {
       case 'getGrupAnggota':
         result = getGrupAnggota(params.grupId);
         break;
+      case 'getPembinaGroups':
+        result = getPembinaGroups(params.pembinaUserId);
+        break;
 
       // Yayasan
       case 'getAllGrupRekap':
@@ -243,7 +246,7 @@ function getSheet(name) {
 }
 
 /**
- * Ensure the users sheet has proper headers.
+ * Ensure the users sheet has proper headers (including gender).
  * Critical: without headers, rowToObject and appendRow produce garbage data.
  */
 function ensureUserHeaders(usersSheet) {
@@ -251,53 +254,71 @@ function ensureUserHeaders(usersSheet) {
     'user_id', 'email', 'password_hash', 'nama', 'role', 'tingkatan',
     'grup_id', 'status', 'transisi_dari', 'transisi_mulai',
     'transisi_durasi_pekan', 'streak_current', 'streak_longest',
-    'badges', 'no_whatsapp', 'created_at'
+    'badges', 'no_whatsapp', 'created_at', 'gender'
   ];
   if (usersSheet.getLastRow() === 0) {
-    // Empty sheet - add headers
     usersSheet.getRange(1, 1, 1, expectedHeaders.length).setValues([expectedHeaders]);
     usersSheet.getRange(1, 1, 1, expectedHeaders.length).setFontWeight('bold');
     usersSheet.setFrozenRows(1);
     return;
   }
-  // Check if row 1 looks like headers
   var firstRow = usersSheet.getRange(1, 1, 1, Math.max(usersSheet.getLastColumn(), expectedHeaders.length)).getValues()[0];
   if (firstRow[0] !== 'user_id') {
-    // Row 1 is data, not headers - insert header row
     usersSheet.insertRowBefore(1);
     usersSheet.getRange(1, 1, 1, expectedHeaders.length).setValues([expectedHeaders]);
     usersSheet.getRange(1, 1, 1, expectedHeaders.length).setFontWeight('bold');
     usersSheet.setFrozenRows(1);
+  } else {
+    // Check if gender column exists, add if missing
+    var genderIdx = firstRow.indexOf('gender');
+    if (genderIdx === -1) {
+      var nextCol = usersSheet.getLastColumn() + 1;
+      usersSheet.getRange(1, nextCol).setValue('gender').setFontWeight('bold');
+      Logger.log('Added missing "gender" column at position ' + nextCol);
+    }
   }
 }
 
 // ============ DATABASE SETUP ============
 
+// Tab colors for visual organization
+var TAB_COLORS = {
+  users: '#4285F4',          // Blue - core data
+  groups: '#4285F4',         // Blue - core data
+  mutabaah: '#34A853',       // Green - daily tracking
+  rekap_mingguan: '#FBBC04', // Yellow - reports
+  rapor_bulanan: '#FBBC04',  // Yellow - reports
+  helpdesk: '#EA4335',       // Red - support
+  arsip: '#9E9E9E',          // Gray - archive
+};
+
 /**
- * Jalankan fungsi ini SEKALI untuk membuat struktur database
+ * Jalankan fungsi ini SEKALI untuk membuat struktur database lengkap.
+ * Aman dijalankan ulang — tidak menghapus data yang sudah ada.
+ * 
  * Menu: Run > setupDatabase
  */
 function setupDatabase() {
-  const ss = getSpreadsheet();
+  var ss = getSpreadsheet();
 
-  // Sheet: users
+  // 1. Sheet: users (master data user)
   createSheetIfNotExists(ss, 'users', [
     'user_id', 'email', 'password_hash', 'nama', 'role', 'tingkatan',
     'grup_id', 'status', 'transisi_dari', 'transisi_mulai',
     'transisi_durasi_pekan', 'streak_current', 'streak_longest',
-    'badges', 'no_whatsapp', 'created_at'
+    'badges', 'no_whatsapp', 'created_at', 'gender'
   ]);
 
-  // Sheet: groups
+  // 2. Sheet: groups (master data grup)
   createSheetIfNotExists(ss, 'groups', [
     'grup_id', 'nama_grup', 'pembina_user_id', 'created_at'
   ]);
 
-  // Sheet: mutabaah_YYYY (tahun ini)
-  const tahun = new Date().getFullYear();
+  // 3. Sheet: mutabaah_YYYY (data input harian, per tahun)
+  var tahun = new Date().getFullYear();
   setupMutabaahSheet(ss, tahun);
 
-  // Sheet: rekap_mingguan
+  // 4. Sheet: rekap_mingguan (agregasi per minggu per grup)
   createSheetIfNotExists(ss, 'rekap_mingguan', [
     'grup_id', 'pekan_ke', 'tahun', 'jumlah_anggota', 'jumlah_mengisi',
     'jumlah_terlambat', 'rata_rata_sholat_fardu', 'rata_rata_berjamaah',
@@ -305,36 +326,69 @@ function setupDatabase() {
     'rata_rata_shaum', 'rata_rata_qiyamullail', 'rata_rata_keseluruhan'
   ]);
 
-  // Sheet: arsip_anggota
+  // 5. Sheet: rapor_bulanan (laporan bulanan per user)
+  createSheetIfNotExists(ss, 'rapor_bulanan', [
+    'rapor_id', 'user_id', 'nama', 'bulan', 'tahun', 'total_weeks',
+    'rata_rata', 'predikat_label', 'predikat_level', 'summary_json',
+    'week_summaries_json', 'generated_at'
+  ]);
+
+  // 6. Sheet: helpdesk_tickets (tiket bantuan)
+  createSheetIfNotExists(ss, 'helpdesk_tickets', [
+    'ticket_id', 'user_id', 'user_nama', 'user_email', 'kategori',
+    'subjek', 'pesan', 'status', 'priority', 'created_at', 'updated_at'
+  ]);
+
+  // 7. Sheet: helpdesk_replies (balasan tiket)
+  createSheetIfNotExists(ss, 'helpdesk_replies', [
+    'reply_id', 'ticket_id', 'user_id', 'user_nama', 'role',
+    'pesan', 'created_at'
+  ]);
+
+  // 8. Sheet: arsip_anggota (arsip user nonaktif)
   createSheetIfNotExists(ss, 'arsip_anggota', [
     'arsip_id', 'user_id', 'nama', 'grup_asal',
     'alasan', 'tanggal_arsip', 'data_json'
   ]);
 
-  // Insert sample data
+  // Apply tab colors & ordering
+  cleanupSheetTabs(ss);
+
+  // Insert sample data (only if empty)
   insertSampleData(ss);
 
-  Logger.log('Database setup selesai!');
+  Logger.log('');
+  Logger.log('========================================');
+  Logger.log('✅ Database setup selesai!');
+  Logger.log('========================================');
+  Logger.log('');
+  Logger.log('Sheets yang tersedia:');
+  Logger.log('  📘 users          - Data user (anggota, pembina, yayasan)');
+  Logger.log('  📘 groups         - Data grup halaqah');
+  Logger.log('  📗 mutabaah_' + tahun + ' - Input harian tahun ' + tahun);
+  Logger.log('  📙 rekap_mingguan - Agregasi per minggu');
+  Logger.log('  📙 rapor_bulanan  - Laporan bulanan');
+  Logger.log('  📕 helpdesk_*     - Sistem tiket bantuan');
+  Logger.log('  ⬜ arsip_anggota  - Arsip user nonaktif');
+  Logger.log('');
+  Logger.log('Selanjutnya: Jalankan setupAdmin() untuk membuat akun admin.');
 }
 
 function setupMutabaahSheet(ss, tahun) {
-  const sheetName = 'mutabaah_' + tahun;
-  const HARI = ['sen', 'sel', 'rab', 'kam', 'jum', 'sab', 'min'];
-  const WAKTU = ['subuh', 'dzuhur', 'ashar', 'maghrib', 'isya'];
+  var sheetName = 'mutabaah_' + tahun;
+  var HARI = ['sen', 'sel', 'rab', 'kam', 'jum', 'sab', 'min'];
+  var WAKTU = ['subuh', 'dzuhur', 'ashar', 'maghrib', 'isya'];
 
-  // Generate sholat fardu columns: sen_subuh, sen_dzuhur, ...
-  const sholatCols = [];
-  HARI.forEach(h => WAKTU.forEach(w => sholatCols.push(h + '_' + w)));
+  var sholatCols = [];
+  HARI.forEach(function(h) { WAKTU.forEach(function(w) { sholatCols.push(h + '_' + w); }); });
 
-  // Generate jamaah columns: jamaah_sen_subuh, ...
-  const jamaahCols = [];
-  HARI.forEach(h => WAKTU.forEach(w => jamaahCols.push('jamaah_' + h + '_' + w)));
+  var jamaahCols = [];
+  HARI.forEach(function(h) { WAKTU.forEach(function(w) { jamaahCols.push('jamaah_' + h + '_' + w); }); });
 
-  const headers = [
+  var headers = [
     'record_id', 'user_id', 'grup_id', 'tingkatan',
-    'pekan_ke', 'tahun', 'tanggal_mulai_pekan', 'tanggal_submit', 'is_terlambat',
-    ...sholatCols,
-    ...jamaahCols,
+    'pekan_ke', 'tahun', 'tanggal_mulai_pekan', 'tanggal_submit', 'is_terlambat'
+  ].concat(sholatCols).concat(jamaahCols).concat([
     'tilawah_juz', 'tilawah_halaman', 'tilawah_total_juz',
     'sholat_dhuha', 'matsurat', 'shaum', 'qiyamullail',
     'kehadiran_upa', 'terlambat_upa_menit',
@@ -342,46 +396,120 @@ function setupMutabaahSheet(ss, tahun) {
     'persen_tilawah', 'persen_matsurat', 'persen_shaum', 'persen_qiyamullail',
     'persen_rata_rata', 'status',
     'edit_count', 'last_edited_at', 'first_submitted_at'
-  ];
+  ]);
 
   createSheetIfNotExists(ss, sheetName, headers);
 }
 
 function createSheetIfNotExists(ss, name, headers) {
-  let sheet = ss.getSheetByName(name);
+  var sheet = ss.getSheetByName(name);
   if (!sheet) {
     sheet = ss.insertSheet(name);
     if (headers && headers.length > 0) {
       sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
       sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+      sheet.getRange(1, 1, 1, headers.length).setBackground('#f3f4f6');
       sheet.setFrozenRows(1);
     }
-    Logger.log('Sheet "' + name + '" dibuat dengan ' + headers.length + ' kolom');
+    Logger.log('✅ Sheet "' + name + '" dibuat (' + headers.length + ' kolom)');
+  } else {
+    Logger.log('ℹ️  Sheet "' + name + '" sudah ada, skip.');
   }
   return sheet;
 }
 
-function insertSampleData(ss) {
-  // Sample groups
-  const groupsSheet = ss.getSheetByName('groups');
-  if (groupsSheet.getLastRow() <= 1) {
-    groupsSheet.appendRow(['grp_001', 'Ustadz Hamdan', 'usr_001', new Date().toISOString()]);
+/**
+ * Rapikan urutan dan warna tab spreadsheet.
+ * Bisa dijalankan kapan saja tanpa menghapus data.
+ * 
+ * Menu: Run > cleanupSheetTabs
+ */
+function cleanupSheetTabs(ss) {
+  if (!ss) ss = getSpreadsheet();
+  
+  // Desired tab order
+  var tabOrder = [
+    'users', 'groups',
+    'mutabaah_' + new Date().getFullYear(),
+    'rekap_mingguan', 'rapor_bulanan',
+    'helpdesk_tickets', 'helpdesk_replies',
+    'arsip_anggota'
+  ];
+
+  // Color mapping
+  var colorMap = {
+    'users': TAB_COLORS.users,
+    'groups': TAB_COLORS.groups,
+    'rekap_mingguan': TAB_COLORS.rekap_mingguan,
+    'rapor_bulanan': TAB_COLORS.rapor_bulanan,
+    'helpdesk_tickets': TAB_COLORS.helpdesk,
+    'helpdesk_replies': TAB_COLORS.helpdesk,
+    'arsip_anggota': TAB_COLORS.arsip,
+  };
+
+  // Apply colors to all sheets
+  var allSheets = ss.getSheets();
+  for (var i = 0; i < allSheets.length; i++) {
+    var sheetName = allSheets[i].getName();
+    
+    // Match mutabaah_YYYY pattern
+    if (sheetName.indexOf('mutabaah_') === 0) {
+      allSheets[i].setTabColor(TAB_COLORS.mutabaah);
+    } else if (colorMap[sheetName]) {
+      allSheets[i].setTabColor(colorMap[sheetName]);
+    }
   }
 
-  // Sample users (with password_hash column)
-  const usersSheet = ss.getSheetByName('users');
-  if (usersSheet.getLastRow() <= 1) {
-    const now = new Date().toISOString();
-    // Pembina
+  // Reorder tabs
+  var position = 1;
+  for (var j = 0; j < tabOrder.length; j++) {
+    var sheet = ss.getSheetByName(tabOrder[j]);
+    if (sheet) {
+      ss.setActiveSheet(sheet);
+      ss.moveActiveSheet(position);
+      position++;
+    }
+  }
+
+  // Move any extra sheets (mutabaah_otherYears, etc.) after the ordered ones
+  allSheets = ss.getSheets();
+  for (var k = 0; k < allSheets.length; k++) {
+    var sn = allSheets[k].getName();
+    if (tabOrder.indexOf(sn) === -1 && sn.indexOf('mutabaah_') === 0) {
+      allSheets[k].setTabColor(TAB_COLORS.mutabaah);
+    }
+  }
+
+  // Activate first sheet
+  var first = ss.getSheetByName('users');
+  if (first) ss.setActiveSheet(first);
+
+  Logger.log('✅ Tab dirapikan: urutan & warna diterapkan.');
+}
+
+function insertSampleData(ss) {
+  // Sample groups
+  var groupsSheet = ss.getSheetByName('groups');
+  if (groupsSheet && groupsSheet.getLastRow() <= 1) {
+    groupsSheet.appendRow(['grp_001', 'Al-Fatih', 'usr_001', new Date().toISOString()]);
+    Logger.log('📦 Sample group "Al-Fatih" ditambahkan.');
+  }
+
+  // Sample users
+  var usersSheet = ss.getSheetByName('users');
+  if (usersSheet && usersSheet.getLastRow() <= 1) {
+    var now = new Date().toISOString();
+    // Pembina (tingkatan = pratama)
     usersSheet.appendRow([
-      'usr_001', 'ustadz.hamdan@sit-matahari.sch.id', '', 'Ustadz Hamdan',
-      'pembina', '', 'grp_001', 'aktif', '', '', '', 0, 0, '[]', '', now
+      'usr_001', 'ustadz.hamdan@sit-matahari.sch.id', '', 'Ust. Hamdan',
+      'pembina', 'pratama', 'grp_001', 'aktif', '', '', '', 0, 0, '[]', '', now, 'ikhwan'
     ]);
     // Yayasan / Admin (default password: admin123)
     usersSheet.appendRow([
       'usr_004', 'yayasan@sit-matahari.sch.id', hashPassword('admin123'), 'Admin Yayasan',
-      'yayasan', '', '', 'aktif', '', '', '', 0, 0, '[]', '', now
+      'yayasan', 'pratama', '', 'aktif', '', '', '', 0, 0, '[]', '', now, 'ikhwan'
     ]);
+    Logger.log('📦 Sample users ditambahkan (Pembina + Admin).');
   }
 }
 
@@ -437,7 +565,7 @@ function setupAdmin() {
   var now = new Date().toISOString();
   sheet.appendRow([
     userId, ADMIN_EMAIL, hashPassword(ADMIN_PASSWORD), ADMIN_NAMA,
-    'yayasan', '', '', 'aktif', '', '', '', 0, 0, '[]', '', now
+    'yayasan', 'pratama', '', 'aktif', '', '', '', 0, 0, '[]', '', now, 'ikhwan'
   ]);
 
   Logger.log('✅ Admin account CREATED:');
@@ -448,3 +576,48 @@ function setupAdmin() {
   Logger.log('');
   Logger.log('⚠️  PENTING: Setelah login, segera ganti password dari halaman Profil!');
 }
+
+/**
+ * Migrate existing spreadsheet: add missing columns to existing sheets.
+ * Safe to run multiple times.
+ * 
+ * Menu: Run > migrateDatabase
+ */
+function migrateDatabase() {
+  var ss = getSpreadsheet();
+  
+  // 1. Ensure gender column in users
+  var usersSheet = ss.getSheetByName('users');
+  if (usersSheet) {
+    ensureUserHeaders(usersSheet);
+    Logger.log('✅ Users sheet headers verified (including gender).');
+  }
+
+  // 2. Ensure rapor_bulanan exists
+  createSheetIfNotExists(ss, 'rapor_bulanan', [
+    'rapor_id', 'user_id', 'nama', 'bulan', 'tahun', 'total_weeks',
+    'rata_rata', 'predikat_label', 'predikat_level', 'summary_json',
+    'week_summaries_json', 'generated_at'
+  ]);
+
+  // 3. Ensure helpdesk sheets
+  createSheetIfNotExists(ss, 'helpdesk_tickets', [
+    'ticket_id', 'user_id', 'user_nama', 'user_email', 'kategori',
+    'subjek', 'pesan', 'status', 'priority', 'created_at', 'updated_at'
+  ]);
+  createSheetIfNotExists(ss, 'helpdesk_replies', [
+    'reply_id', 'ticket_id', 'user_id', 'user_nama', 'role',
+    'pesan', 'created_at'
+  ]);
+
+  // 4. Ensure group headers
+  var groupsSheet = ss.getSheetByName('groups');
+  if (groupsSheet) ensureGroupHeaders(groupsSheet);
+
+  // 5. Clean up tabs
+  cleanupSheetTabs(ss);
+
+  Logger.log('');
+  Logger.log('✅ Migrasi selesai! Semua kolom & sheet ter-update.');
+}
+

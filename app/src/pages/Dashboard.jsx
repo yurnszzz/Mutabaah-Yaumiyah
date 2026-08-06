@@ -1,6 +1,6 @@
 import { useAuth } from '../context/AuthContext'
 import { useMutabaah } from '../context/MutabaahContext'
-import { TARGET_AMALAN } from '../config/constants'
+import { TARGET_AMALAN, getEffectiveTingkatan } from '../config/constants'
 import {
   CalendarDays, TrendingUp, BookOpen, Users, Moon,
   Sunrise, HandHeart, Flame, Award, ArrowRight, Star
@@ -70,7 +70,7 @@ export default function Dashboard() {
   const { user } = useAuth()
   const { weekInfo, calculatePercentages, calculateTotals, savedWeeks } = useMutabaah()
 
-  const tingkatan = user?.tingkatan || 'muda'
+  const tingkatan = getEffectiveTingkatan(user)
   const targets = TARGET_AMALAN[tingkatan]
   const percentages = calculatePercentages(tingkatan)
   const totals = calculateTotals()

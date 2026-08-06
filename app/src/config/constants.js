@@ -67,3 +67,14 @@ export const BATAS_WAKTU_MENIT = 59
 
 // Halaman per juz (standar)
 export const HALAMAN_PER_JUZ = 20
+
+/**
+ * Get effective tingkatan for a user.
+ * - Pembina & Yayasan always use 'pratama' targets
+ * - Anggota uses their stored tingkatan or defaults to 'muda'
+ */
+export function getEffectiveTingkatan(user) {
+  if (!user) return 'muda'
+  if (user.role === 'pembina' || user.role === 'yayasan') return 'pratama'
+  return user.tingkatan || 'muda'
+}

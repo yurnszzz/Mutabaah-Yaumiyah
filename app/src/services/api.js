@@ -416,6 +416,13 @@ export async function getGrupAnggota(grupId) {
 }
 
 /**
+ * Get all groups managed by a pembina (multi-group)
+ */
+export async function getPembinaGroups(pembinaUserId) {
+  return apiGet('getPembinaGroups', { pembinaUserId });
+}
+
+/**
  * Update profile (self-service name/email)
  */
 export async function updateProfile(userId, nama, email) {

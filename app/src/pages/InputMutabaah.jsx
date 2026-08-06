@@ -3,7 +3,8 @@ import { useAuth } from '../context/AuthContext'
 import { useMutabaah } from '../context/MutabaahContext'
 import {
   HARI, HARI_SHORT, WAKTU_SHALAT, TARGET_AMALAN,
-  KEHADIRAN_OPTIONS, JAMAAH_OPTIONS, HALAMAN_PER_JUZ
+  KEHADIRAN_OPTIONS, JAMAAH_OPTIONS, HALAMAN_PER_JUZ,
+  getEffectiveTingkatan
 } from '../config/constants'
 import {
   CalendarDays, BookOpen, Moon, Sunrise, Sun, HandHeart, Clock,
@@ -152,21 +153,44 @@ function BerjamaahGrid({ data, onChange }) {
     return null
   }
 
+  function isRowAllJamaah(waktu) {
+    return HARI.every(h => data[h]?.[waktu] === 'jamaah')
+  }
+
+  function toggleRow(waktu) {
+    const allJamaah = isRowAllJamaah(waktu)
+    HARI.forEach(h => onChange(h, waktu, allJamaah ? 'tidak' : 'jamaah'))
+  }
+
+  function toggleAll() {
+    const allJamaah = total === 35
+    HARI.forEach(h => WAKTU_SHALAT.forEach(w => onChange(h, w, allJamaah ? 'tidak' : 'jamaah')))
+  }
+
   return (
     <div className="shalat-section">
       <div className="shalat-info">
         <span className="shalat-info__count">{total} berjamaah</span>
-        <div className="jamaah-legend">
-          <span className="jamaah-legend__item jamaah-legend__item--jamaah">
-            <Check size={10} strokeWidth={3} /> Jamaah
-          </span>
-          <span className="jamaah-legend__item jamaah-legend__item--munfarid">
-            <Minus size={10} strokeWidth={3} /> Sendiri
-          </span>
-          <span className="jamaah-legend__item jamaah-legend__item--tidak">
-            <X size={10} strokeWidth={3} /> Tidak
-          </span>
-        </div>
+        <button
+          type="button"
+          className={`bulk-check-btn ${total === 35 ? 'bulk-check-btn--active' : ''}`}
+          onClick={toggleAll}
+          title={total === 35 ? 'Reset semua' : 'Semua Jamaah'}
+        >
+          <Check size={12} strokeWidth={3} />
+          {total === 35 ? 'Batal Semua' : 'Semua Jamaah'}
+        </button>
+      </div>
+      <div className="jamaah-legend" style={{ marginBottom: 'var(--space-2)' }}>
+        <span className="jamaah-legend__item jamaah-legend__item--jamaah">
+          <Check size={10} strokeWidth={3} /> Jamaah
+        </span>
+        <span className="jamaah-legend__item jamaah-legend__item--munfarid">
+          <Minus size={10} strokeWidth={3} /> Sendiri
+        </span>
+        <span className="jamaah-legend__item jamaah-legend__item--tidak">
+          <X size={10} strokeWidth={3} /> Tidak
+        </span>
       </div>
       <div className="shalat-grid" role="grid">
         <div className="shalat-grid__header">
@@ -175,26 +199,36 @@ function BerjamaahGrid({ data, onChange }) {
             <div key={h} className="shalat-grid__day-label">{h}</div>
           ))}
         </div>
-        {WAKTU_SHALAT.map(waktu => (
-          <div key={waktu} className="shalat-grid__row" role="row">
-            <div className="shalat-grid__waktu-label">{waktu}</div>
-            {HARI.map((hari, idx) => {
-              const val = data[hari]?.[waktu] || 'tidak'
-              return (
-                <button
-                  key={`${hari}-${waktu}`}
-                  type="button"
-                  role="gridcell"
-                  className={`shalat-grid__cell jamaah-grid__cell ${getCellClass(val)}`}
-                  onClick={() => onChange(hari, waktu, cycleValue(val))}
-                  aria-label={`${waktu} ${HARI_SHORT[idx]} - ${val}`}
-                >
-                  {getCellIcon(val)}
-                </button>
-              )
-            })}
-          </div>
-        ))}
+        {WAKTU_SHALAT.map(waktu => {
+          const rowAll = isRowAllJamaah(waktu)
+          return (
+            <div key={waktu} className="shalat-grid__row" role="row">
+              <button
+                type="button"
+                className={`shalat-grid__waktu-label shalat-grid__waktu-label--clickable ${rowAll ? 'shalat-grid__waktu-label--all' : ''}`}
+                onClick={() => toggleRow(waktu)}
+                title={rowAll ? `Reset ${waktu}` : `Semua Jamaah ${waktu}`}
+              >
+                {waktu}
+              </button>
+              {HARI.map((hari, idx) => {
+                const val = data[hari]?.[waktu] || 'tidak'
+                return (
+                  <button
+                    key={`${hari}-${waktu}`}
+                    type="button"
+                    role="gridcell"
+                    className={`shalat-grid__cell jamaah-grid__cell ${getCellClass(val)}`}
+                    onClick={() => onChange(hari, waktu, cycleValue(val))}
+                    aria-label={`${waktu} ${HARI_SHORT[idx]} - ${val}`}
+                  >
+                    {getCellIcon(val)}
+                  </button>
+                )
+              })}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -259,7 +293,7 @@ export default function InputMutabaah() {
 
   const [submitted, setSubmitted] = useState(false)
 
-  const tingkatan = user?.tingkatan || 'muda'
+  const tingkatan = getEffectiveTingkatan(user)
   const targets = TARGET_AMALAN[tingkatan]
   const percentages = calculatePercentages(tingkatan)
 

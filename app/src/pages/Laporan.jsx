@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useMutabaah } from '../context/MutabaahContext'
 import { useAuth } from '../context/AuthContext'
-import { TARGET_AMALAN } from '../config/constants'
+import { TARGET_AMALAN, getEffectiveTingkatan } from '../config/constants'
 import {
   getHistory as apiGetHistory,
   isApiConfigured,
@@ -18,7 +18,7 @@ const ITEMS_PER_PAGE = 8
 export default function Laporan() {
   const { user } = useAuth()
   const { savedWeeks, weekInfo, resetWeek } = useMutabaah()
-  const tingkatan = user?.tingkatan || 'muda'
+  const tingkatan = getEffectiveTingkatan(user)
 
   const [expandedId, setExpandedId] = useState(null)
   const [showCount, setShowCount] = useState(ITEMS_PER_PAGE)

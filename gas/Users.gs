@@ -604,6 +604,49 @@ function updateGroupPembina(grupId, userId) {
 }
 
 /**
+ * Get all groups assigned to a pembina (supports multi-group)
+ */
+function getPembinaGroups(pembinaUserId) {
+  if (!pembinaUserId) return { error: 'pembinaUserId diperlukan' };
+
+  var groupSheet = getSheet('groups');
+  ensureGroupHeaders(groupSheet);
+  var gData = groupSheet.getDataRange().getValues();
+  var gHeaders = gData[0];
+  var pembinaCol = gHeaders.indexOf('pembina_user_id');
+
+  var groups = [];
+  for (var i = 1; i < gData.length; i++) {
+    if (gData[i][pembinaCol] === pembinaUserId) {
+      groups.push(rowToObject(gHeaders, gData[i]));
+    }
+  }
+
+  // Also include group from user's own grup_id (legacy single-group)
+  var userSheet = getSheet('users');
+  var uData = userSheet.getDataRange().getValues();
+  var uHeaders = uData[0];
+  var uidCol = uHeaders.indexOf('user_id');
+  var ugCol = uHeaders.indexOf('grup_id');
+  
+  for (var j = 1; j < uData.length; j++) {
+    if (uData[j][uidCol] === pembinaUserId && uData[j][ugCol]) {
+      var userGrupId = uData[j][ugCol];
+      // Check if this group is already in the list
+      var alreadyAdded = groups.some(function(g) { return g.grup_id === userGrupId; });
+      if (!alreadyAdded) {
+        // Find group info
+        var grp = getGroupById(userGrupId);
+        if (grp) groups.push(grp);
+      }
+      break;
+    }
+  }
+
+  return { groups: groups, total: groups.length };
+}
+
+/**
  * B6: Get mutabaah history for a specific member (pembina drill-down).
  * Server-side permission: pembina's grup_id must match member's grup_id.
  */
