@@ -663,3 +663,50 @@
   background: rgba(232, 121, 168, 0.08);
   color: #be185d;
 }
+
+/* Guidance banner (auto-redirect from Google Sign-In) */
+.login-form__guidance {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: linear-gradient(135deg, rgba(52, 168, 83, 0.08), rgba(52, 168, 83, 0.04));
+  border: 1px solid rgba(52, 168, 83, 0.25);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+  animation: fadeSlideIn 0.3s ease-out;
+}
+
+.login-form__guidance svg {
+  color: #34A853;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.login-form__guidance-title {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--color-text);
+  margin-bottom: 2px;
+}
+
+.login-form__guidance-desc {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.login-form__guidance-desc strong {
+  color: var(--color-text);
+}
+
+/* Hint text (target info) */
+.login-form__hint {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}

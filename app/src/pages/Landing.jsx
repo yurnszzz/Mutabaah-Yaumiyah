@@ -1,7 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import {
   BookOpen, CheckCircle, TrendingUp, Users, Award,
-  ArrowRight, ChevronRight, ClipboardList, BarChart3
+  ArrowRight, ChevronRight, ClipboardList, BarChart3,
+  LogIn, UserPlus, Smartphone, MousePointer, ShieldCheck
 } from 'lucide-react'
 import './Landing.css'
 
@@ -32,10 +33,62 @@ const features = [
   },
 ]
 
-const steps = [
-  { num: '1', title: 'Daftar Akun', desc: 'Buat akun dengan email atau masuk via Google.' },
-  { num: '2', title: 'Isi Mutabaah', desc: 'Catat amalan harian setiap pekan sebelum hari Minggu.' },
-  { num: '3', title: 'Pantau Progress', desc: 'Lihat pencapaian, streak, dan laporan di dashboard.' },
+const tutorialSteps = [
+  {
+    num: '1',
+    icon: MousePointer,
+    title: 'Klik "Mulai Sekarang"',
+    desc: 'Tekan tombol di atas atau di bawah halaman ini untuk masuk ke halaman login.',
+    detail: null,
+  },
+  {
+    num: '2',
+    icon: LogIn,
+    title: 'Masuk atau Daftar',
+    desc: 'Pilih salah satu cara untuk masuk ke aplikasi:',
+    detail: [
+      'Klik tombol "Sign in with Google" untuk masuk otomatis dengan akun Google Anda.',
+      'Jika akun belum terdaftar, Anda akan otomatis diarahkan ke form pendaftaran.',
+      'Atau daftar manual dengan mengisi email dan password di tab "Daftar".',
+    ],
+  },
+  {
+    num: '3',
+    icon: UserPlus,
+    title: 'Lengkapi Data Pendaftaran',
+    desc: 'Isi data yang diminta saat mendaftar:',
+    detail: [
+      'Nama lengkap — akan ditampilkan di profil Anda.',
+      'Jenis kelamin — pilih Ikhwan atau Akhwat.',
+      'Peran — pilih Anggota (siswa) atau Pembina (guru).',
+      'Jenjang — Muda atau Pratama (menentukan target amalan).',
+      'Password — minimal 6 karakter untuk keamanan akun.',
+    ],
+  },
+  {
+    num: '4',
+    icon: ClipboardList,
+    title: 'Isi Mutabaah Setiap Pekan',
+    desc: 'Setelah masuk, catat amalan harian Anda setiap pekan:',
+    detail: [
+      'Buka menu "Input" untuk mengisi data sholat, tilawah, dan amalan lainnya.',
+      'Centang sholat fardu dan berjamaah untuk setiap hari.',
+      'Isi jumlah tilawah, sholat dhuha, puasa sunnah, dan amalan lainnya.',
+      'Klik "Simpan" sebelum hari Minggu agar tercatat tepat waktu.',
+    ],
+  },
+  {
+    num: '5',
+    icon: TrendingUp,
+    title: 'Pantau Progress di Dashboard',
+    desc: 'Lihat pencapaian ibadah Anda dari waktu ke waktu:',
+    detail: [
+      'Dashboard menampilkan progress pekan ini dan perbandingan target.',
+      'Menu Laporan menampilkan riwayat semua pekan yang sudah diisi.',
+      'Rapor Bulanan memberikan evaluasi predikat (A–E) setiap bulan.',
+      'Leaderboard menunjukkan ranking konsistensi dan pencapaian.',
+    ],
+  },
 ]
 
 export default function Landing() {
@@ -58,8 +111,8 @@ export default function Landing() {
               <span>Mulai Sekarang</span>
               <ArrowRight size={18} />
             </button>
-            <a href="#tentang" className="landing-hero__btn landing-hero__btn--ghost">
-              Pelajari Lebih Lanjut
+            <a href="#panduan" className="landing-hero__btn landing-hero__btn--ghost">
+              Panduan Penggunaan
             </a>
           </div>
         </div>
@@ -105,24 +158,45 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* How It Works */}
-      <section className="landing-steps">
+      {/* Tutorial / Panduan */}
+      <section id="panduan" className="landing-tutorial">
         <div className="landing-container">
           <div className="landing-section-header">
-            <CheckCircle size={24} className="landing-section-header__icon" />
-            <h2 className="landing-section-header__title">Cara Menggunakan</h2>
+            <ShieldCheck size={24} className="landing-section-header__icon" />
+            <h2 className="landing-section-header__title">Panduan Penggunaan</h2>
+            <p className="landing-section-header__subtitle">
+              Ikuti langkah-langkah berikut untuk mulai menggunakan Mutabaah Yaumiyah
+            </p>
           </div>
-          <div className="landing-steps__list">
-            {steps.map((s, i) => (
-              <div key={i} className="landing-step">
-                <div className="landing-step__num">{s.num}</div>
-                <div className="landing-step__content">
-                  <h3 className="landing-step__title">{s.title}</h3>
-                  <p className="landing-step__desc">{s.desc}</p>
+          <div className="landing-tutorial__timeline">
+            {tutorialSteps.map((step, i) => {
+              const StepIcon = step.icon
+              return (
+                <div key={i} className="landing-tutorial__step">
+                  <div className="landing-tutorial__step-marker">
+                    <div className="landing-tutorial__step-num">{step.num}</div>
+                    {i < tutorialSteps.length - 1 && <div className="landing-tutorial__step-line" />}
+                  </div>
+                  <div className="landing-tutorial__step-content">
+                    <div className="landing-tutorial__step-header">
+                      <StepIcon size={20} className="landing-tutorial__step-icon" />
+                      <h3 className="landing-tutorial__step-title">{step.title}</h3>
+                    </div>
+                    <p className="landing-tutorial__step-desc">{step.desc}</p>
+                    {step.detail && (
+                      <ul className="landing-tutorial__step-list">
+                        {step.detail.map((item, j) => (
+                          <li key={j} className="landing-tutorial__step-item">
+                            <CheckCircle size={14} className="landing-tutorial__check" />
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 </div>
-                {i < steps.length - 1 && <ChevronRight size={20} className="landing-step__arrow" />}
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </section>

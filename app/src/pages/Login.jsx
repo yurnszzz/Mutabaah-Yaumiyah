@@ -3,7 +3,8 @@ import { useAuth } from '../context/AuthContext'
 import { useSearchParams } from 'react-router-dom'
 import {
   LogIn, Users, Shield, Star, Mail, ArrowRight,
-  Loader2, UserPlus, CheckCircle, Lock, User, Eye, EyeOff, ChevronDown, KeyRound
+  Loader2, UserPlus, CheckCircle, Lock, User, Eye, EyeOff, ChevronDown, KeyRound,
+  Sprout, Award, Flame
 } from 'lucide-react'
 import './Login.css'
 
@@ -142,6 +143,7 @@ export default function Login() {
   const [gelarSelf, setGelarSelf] = useState('Ust.') // gelar for pembina's own name
   const [localError, setLocalError] = useState('')
   const [googleEmail, setGoogleEmail] = useState('') // for Google auto-fill
+  const [googleAutoRegister, setGoogleAutoRegister] = useState(false) // auto-redirect from sign-in
 
   // Ref to always have current tab value in Google callback (avoids stale closure)
   const tabRef = useRef(tab)
@@ -253,31 +255,36 @@ export default function Login() {
     }
   }
 
-  // Google OAuth callback - uses tabRef to always read current tab (no stale closure)
+  // Google OAuth callback — unified for both login & register tabs
+  // If user not found: auto-redirect to register with pre-filled data (no error)
   async function onGoogleSuccess(credentialResponse) {
     const currentTab = tabRef.current
+    const payload = decodeGoogleJwt(credentialResponse.credential)
+    if (!payload || !payload.email) {
+      setLocalError('Gagal membaca data dari Google')
+      return
+    }
+
     if (currentTab === 'register') {
-      // REGISTER MODE: Directly extract info and pre-fill the form (no login attempt)
-      const payload = decodeGoogleJwt(credentialResponse.credential)
-      if (!payload || !payload.email) {
-        setLocalError('Gagal membaca data dari Google')
-        return
-      }
+      // REGISTER MODE: Pre-fill form directly
       setEmail(payload.email)
       setGoogleEmail(payload.email)
       setNama(payload.name || payload.email.split('@')[0])
       setLocalError('')
       clearMessages()
     } else {
-      // LOGIN MODE: Try login first, redirect to register if unregistered
+      // LOGIN MODE: Try login, auto-redirect to register if not found
       const result = await handleGoogleLogin(credentialResponse)
       if (result && result.unregistered) {
+        // Smooth redirect — no error, show guidance
         setTab('register')
         setEmail(result.email)
         setGoogleEmail(result.email)
-        setNama(result.nama || '')
+        setNama(result.nama || payload.name || '')
         setLocalError('')
         clearMessages()
+        // Set a temporary success-like message to guide user
+        setGoogleAutoRegister(true)
       }
     }
   }
@@ -387,6 +394,18 @@ export default function Login() {
             {/* === Register Form === */}
             {tab === 'register' && (
               <form onSubmit={handleRegister} className="login-form">
+                {/* Auto-redirect guidance */}
+                {googleAutoRegister && googleEmail && (
+                  <div className="login-form__guidance">
+                    <CheckCircle size={16} />
+                    <div>
+                      <p className="login-form__guidance-title">Akun belum terdaftar</p>
+                      <p className="login-form__guidance-desc">
+                        Email <strong>{googleEmail}</strong> belum terdaftar. Lengkapi data di bawah untuk membuat akun baru.
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <div className="login-form__input-wrapper">
                   <User size={18} className="login-form__icon" />
                   <input
@@ -424,7 +443,7 @@ export default function Login() {
                       onClick={() => { setGender('ikhwan'); setGelarPembina('Ust.'); setGelarSelf('Ust.') }}
                       disabled={isLoading}
                     >
-                      ♂ Ikhwan
+                      <Users size={14} /> Ikhwan
                     </button>
                     <button
                       type="button"
@@ -432,7 +451,7 @@ export default function Login() {
                       onClick={() => { setGender('akhwat'); setGelarPembina('Ustadzah'); setGelarSelf('Ustadzah') }}
                       disabled={isLoading}
                     >
-                      ♀ Akhwat
+                      <User size={14} /> Akhwat
                     </button>
                   </div>
                 </div>
@@ -463,7 +482,7 @@ export default function Login() {
                         onClick={() => setTingkatan('muda')}
                         disabled={isLoading}
                       >
-                        🌱 Muda
+                        <Sprout size={14} /> Muda
                       </button>
                       <button
                         type="button"
@@ -471,7 +490,7 @@ export default function Login() {
                         onClick={() => setTingkatan('pratama')}
                         disabled={isLoading}
                       >
-                        ⭐ Pratama
+                        <Award size={14} /> Pratama
                       </button>
                     </div>
                     <p className="login-form__hint" style={{ marginTop: '4px' }}>
@@ -482,12 +501,7 @@ export default function Login() {
                   </div>
                 )}
 
-                {/* Info for pembina: always Pratama target */}
-                {role === 'pembina' && (
-                  <p className="login-form__hint" style={{ background: 'var(--color-info-bg)', padding: '8px 12px', borderRadius: 'var(--radius-md)' }}>
-                    ℹ️ Pembina menggunakan target capaian jenjang <strong>Pratama</strong> secara default.
-                  </p>
-                )}
+
 
                 {/* Gelar selector for PEMBINA's own name */}
                 {role === 'pembina' && (
@@ -546,11 +560,7 @@ export default function Login() {
                   </>
                 )}
 
-                {googleEmail && (
-                  <p className="login-form__hint login-form__hint--info">
-                    📧 Akun Google <strong>{googleEmail}</strong> belum terdaftar. Lengkapi data di bawah untuk mendaftar.
-                  </p>
-                )}
+
 
                 <PasswordInput
                   id="register-password"

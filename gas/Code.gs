@@ -591,6 +591,27 @@ function migrateDatabase() {
   if (usersSheet) {
     ensureUserHeaders(usersSheet);
     Logger.log('✅ Users sheet headers verified (including gender).');
+
+    // 1b. Fix pembina/yayasan tingkatan → 'pratama'
+    var uData = usersSheet.getDataRange().getValues();
+    var uHeaders = uData[0];
+    var roleCol = uHeaders.indexOf('role');
+    var tingkatanCol = uHeaders.indexOf('tingkatan');
+    var fixCount = 0;
+
+    if (roleCol >= 0 && tingkatanCol >= 0) {
+      for (var i = 1; i < uData.length; i++) {
+        var role = (uData[i][roleCol] || '').toString().toLowerCase();
+        var tingkatan = (uData[i][tingkatanCol] || '').toString().toLowerCase();
+        if ((role === 'pembina' || role === 'yayasan') && tingkatan !== 'pratama') {
+          usersSheet.getRange(i + 1, tingkatanCol + 1).setValue('pratama');
+          fixCount++;
+        }
+      }
+      if (fixCount > 0) {
+        Logger.log('✅ ' + fixCount + ' akun pembina/yayasan di-set ke tingkatan "pratama".');
+      }
+    }
   }
 
   // 2. Ensure rapor_bulanan exists

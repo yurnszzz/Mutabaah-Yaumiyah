@@ -177,7 +177,7 @@ export default function DashboardYayasan() {
                         </div>
                         <div className="admin-grup-rekap__meta">
                           <span>{g.totalAnggota} anggota</span>
-                          <span>✅ {g.sudahIsi} · ⏳ {g.belumIsi}</span>
+                          <span>Sudah: {g.sudahIsi} / Belum: {g.belumIsi}</span>
                         </div>
                       </div>
                     )

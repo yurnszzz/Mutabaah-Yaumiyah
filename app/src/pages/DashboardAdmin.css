@@ -383,6 +383,18 @@
   color: var(--color-gray-400);
 }
 
+.pembina-member__streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 6px;
+  color: var(--color-warning);
+}
+
+.pembina-member__streak svg {
+  color: var(--color-warning);
+}
+
 .pembina-status {
   display: inline-flex;
   align-items: center;

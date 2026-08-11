@@ -9,7 +9,7 @@ import {
 import {
   Users, BarChart3, ChevronRight, Loader2,
   CheckCircle, XCircle, Clock, UserCheck, Activity, TrendingUp,
-  ChevronDown
+  ChevronDown, Flame
 } from 'lucide-react'
 import './DashboardAdmin.css'
 
@@ -220,7 +220,11 @@ export default function DashboardPembina() {
                         <p className="pembina-member__name">{m.nama}</p>
                         <p className="pembina-member__meta">
                           {m.tingkatan ? m.tingkatan.charAt(0).toUpperCase() + m.tingkatan.slice(1) : 'Anggota'}
-                          {m.streak_current > 0 && ` · 🔥 ${m.streak_current}`}
+                          {m.streak_current > 0 && (
+                            <span className="pembina-member__streak">
+                              <Flame size={12} /> {m.streak_current}
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div className="pembina-member__status">

@@ -128,14 +128,24 @@ export function AuthProvider({ children }) {
       const nama = payload.name || payload.email.split('@')[0]
 
       // Try login first
-      const loginResult = await apiLoginGoogle(email)
-      if (loginResult && loginResult.user) {
-        setUser(setUserData(loginResult.user))
-        return
+      try {
+        const loginResult = await apiLoginGoogle(email)
+        if (loginResult && loginResult.user) {
+          setUser(setUserData(loginResult.user))
+          return
+        }
+      } catch (loginErr) {
+        // "User tidak ditemukan" is expected — not an error to show
+        const msg = (loginErr.message || '').toLowerCase()
+        if (msg.includes('tidak ditemukan') || msg.includes('not found') || msg.includes('belum terdaftar')) {
+          // Expected: user doesn't exist yet — return unregistered signal
+          return { unregistered: true, email, nama }
+        }
+        // Other errors (network, server) — show to user
+        throw loginErr
       }
 
-      // Not registered yet - return info for auto-fill register form
-      // Don't auto-register! User needs to choose role and pembina name first.
+      // If loginResult exists but has no user property
       return { unregistered: true, email, nama }
     } catch (err) {
       setError(err.message || 'Gagal terhubung ke server')
