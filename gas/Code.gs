@@ -113,6 +113,11 @@ function doGet(e) {
         result = getMonthlyReport(params.userId, parseInt(params.bulan), parseInt(params.tahun));
         break;
 
+      // UPA Notes
+      case 'getUpaNotes':
+        result = getUpaNotes(params.userId);
+        break;
+
       default:
         result = { error: 'Action tidak dikenal: ' + action };
     }
@@ -205,6 +210,14 @@ function doPost(e) {
         result = removeMemberFromGroup(data);
         break;
 
+      // UPA Notes
+      case 'saveUpaNote':
+        result = saveUpaNote(data);
+        break;
+      case 'deleteUpaNote':
+        result = deleteUpaNote(data);
+        break;
+
       default:
         result = { error: 'Action tidak dikenal: ' + action };
     }
@@ -293,6 +306,97 @@ var TAB_COLORS = {
 };
 
 /**
+ * ============================================
+ * MIGRASI: Tambah kolom haid + sheet upa_notes
+ * ============================================
+ * Jalankan SEKALI setelah update kode.
+ * AMAN: Tidak menghapus atau mengubah data existing.
+ * 
+ * Menu: Run > migrateAddHaidColumns
+ */
+function migrateAddHaidColumns() {
+  var ss = getSpreadsheet();
+  var sheets = ss.getSheets();
+  var migrated = [];
+
+  for (var i = 0; i < sheets.length; i++) {
+    var name = sheets[i].getName();
+    
+    // Only process mutabaah_YYYY sheets
+    if (name.indexOf('mutabaah_') !== 0) continue;
+    
+    var sheet = sheets[i];
+    if (sheet.getLastRow() === 0) continue; // empty sheet, skip
+    
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    var colsAdded = [];
+    
+    // Check if hari_haid column already exists
+    if (headers.indexOf('hari_haid') === -1) {
+      // Insert after terlambat_upa_menit (or at end if not found)
+      var insertAfter = headers.indexOf('terlambat_upa_menit');
+      if (insertAfter === -1) insertAfter = headers.indexOf('persen_sholat_fardu');
+      if (insertAfter === -1) insertAfter = headers.length - 1;
+      
+      var insertCol = insertAfter + 2; // 1-indexed, after the target column
+      
+      // Insert 2 new columns
+      sheet.insertColumnAfter(insertAfter + 1);
+      sheet.insertColumnAfter(insertAfter + 1);
+      
+      // Set headers
+      sheet.getRange(1, insertCol).setValue('hari_haid');
+      sheet.getRange(1, insertCol).setFontWeight('bold');
+      sheet.getRange(1, insertCol).setBackground('#f3f4f6');
+      
+      sheet.getRange(1, insertCol + 1).setValue('hari_haid_count');
+      sheet.getRange(1, insertCol + 1).setFontWeight('bold');
+      sheet.getRange(1, insertCol + 1).setBackground('#f3f4f6');
+      
+      // Fill existing rows with defaults (empty string and 0)
+      var lastRow = sheet.getLastRow();
+      if (lastRow > 1) {
+        var emptyRange = sheet.getRange(2, insertCol, lastRow - 1, 1);
+        var zeroRange = sheet.getRange(2, insertCol + 1, lastRow - 1, 1);
+        var emptyVals = [];
+        var zeroVals = [];
+        for (var r = 0; r < lastRow - 1; r++) {
+          emptyVals.push(['']);
+          zeroVals.push([0]);
+        }
+        emptyRange.setValues(emptyVals);
+        zeroRange.setValues(zeroVals);
+      }
+      
+      colsAdded.push('hari_haid', 'hari_haid_count');
+    }
+    
+    if (colsAdded.length > 0) {
+      migrated.push(name + ' (+' + colsAdded.join(', ') + ')');
+      Logger.log('Migrasi ' + name + ': Kolom ' + colsAdded.join(', ') + ' ditambahkan.');
+    } else {
+      Logger.log('Sheet ' + name + ': Kolom haid sudah ada, skip.');
+    }
+  }
+  
+  // Also ensure upa_notes sheet exists
+  setupUpaNotesSheet(ss);
+  
+  Logger.log('');
+  Logger.log('========================================');
+  Logger.log('Migrasi selesai!');
+  Logger.log('========================================');
+  if (migrated.length > 0) {
+    Logger.log('Sheet yang dimigrasi: ' + migrated.join(', '));
+  } else {
+    Logger.log('Tidak ada sheet yang perlu dimigrasi.');
+  }
+  Logger.log('Sheet upa_notes: OK');
+  Logger.log('');
+  Logger.log('Data existing TIDAK diubah. Kolom baru diisi default (kosong/0).');
+}
+
+/**
  * Jalankan fungsi ini SEKALI untuk membuat struktur database lengkap.
  * Aman dijalankan ulang — tidak menghapus data yang sudah ada.
  * 
@@ -351,6 +455,9 @@ function setupDatabase() {
     'alasan', 'tanggal_arsip', 'data_json'
   ]);
 
+  // 9. Sheet: upa_notes (catatan pembina)
+  setupUpaNotesSheet(ss);
+
   // Apply tab colors & ordering
   cleanupSheetTabs(ss);
 
@@ -392,6 +499,7 @@ function setupMutabaahSheet(ss, tahun) {
     'tilawah_juz', 'tilawah_halaman', 'tilawah_total_juz',
     'sholat_dhuha', 'matsurat', 'shaum', 'qiyamullail',
     'kehadiran_upa', 'terlambat_upa_menit',
+    'hari_haid', 'hari_haid_count',
     'persen_sholat_fardu', 'persen_berjamaah', 'persen_sholat_dhuha',
     'persen_tilawah', 'persen_matsurat', 'persen_shaum', 'persen_qiyamullail',
     'persen_rata_rata', 'status',
@@ -432,6 +540,7 @@ function cleanupSheetTabs(ss) {
     'users', 'groups',
     'mutabaah_' + new Date().getFullYear(),
     'rekap_mingguan', 'rapor_bulanan',
+    'upa_notes',
     'helpdesk_tickets', 'helpdesk_replies',
     'arsip_anggota'
   ];
@@ -444,6 +553,7 @@ function cleanupSheetTabs(ss) {
     'rapor_bulanan': TAB_COLORS.rapor_bulanan,
     'helpdesk_tickets': TAB_COLORS.helpdesk,
     'helpdesk_replies': TAB_COLORS.helpdesk,
+    'upa_notes': '#7c3aed',
     'arsip_anggota': TAB_COLORS.arsip,
   };
 

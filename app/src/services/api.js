@@ -513,6 +513,29 @@ export async function getMonthlyReport(userId, bulan, tahun) {
   });
 }
 
+// ============ UPA Notes ============
+
+/**
+ * Get all notes for a user (pembina)
+ */
+export async function getUpaNotes(userId) {
+  return apiGet('getUpaNotes', { userId });
+}
+
+/**
+ * Save (create or update) a note
+ */
+export async function saveUpaNote(data) {
+  return apiPost('saveUpaNote', data);
+}
+
+/**
+ * Delete a note
+ */
+export async function deleteUpaNote(data) {
+  return apiPost('deleteUpaNote', data);
+}
+
 /**
  * Generic POST helper - exported for dynamic import in components
  */

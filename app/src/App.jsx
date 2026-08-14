@@ -19,6 +19,7 @@ import HelpdeskAdmin from './pages/HelpdeskAdmin'
 import TicketDetail from './pages/TicketDetail'
 import Leaderboard from './pages/Leaderboard'
 import RaporBulanan from './pages/RaporBulanan'
+import UpaNotes from './pages/UpaNotes'
 
 function ProtectedRoute({ children }) {
   const { user } = useAuth()
@@ -78,6 +79,7 @@ function AppRoutes() {
         <Route path="profil" element={<Profil />} />
         {/* Pembina routes */}
         <Route path="anggota" element={<AnggotaGrup />} />
+        <Route path="upa-notes" element={<UpaNotes />} />
         {/* Leaderboard + Rapor */}
         <Route path="leaderboard" element={<Leaderboard />} />
         <Route path="rapor-bulanan" element={<RaporBulanan />} />

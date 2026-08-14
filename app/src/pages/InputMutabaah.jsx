@@ -4,12 +4,12 @@ import { useMutabaah } from '../context/MutabaahContext'
 import {
   HARI, HARI_SHORT, WAKTU_SHALAT, TARGET_AMALAN,
   KEHADIRAN_OPTIONS, JAMAAH_OPTIONS, HALAMAN_PER_JUZ,
-  getEffectiveTingkatan
+  getEffectiveTingkatan, getAdjustedTargets, IBADAH_TERDAMPAK_HAID
 } from '../config/constants'
 import {
   CalendarDays, BookOpen, Moon, Sunrise, Sun, HandHeart, Clock,
   Users, ChevronDown, ChevronUp, Check, X, Minus, Send,
-  AlertCircle, Info, Star
+  AlertCircle, Info, Star, Droplet
 } from 'lucide-react'
 import './InputMutabaah.css'
 
@@ -50,46 +50,55 @@ function SectionHeader({ icon: Icon, title, subtitle, percentage, isOpen, onTogg
   )
 }
 
-function SholatFarduGrid({ data, onChange, onCheckAllRow, onCheckAllGrid }) {
+function SholatFarduGrid({ data, onChange, haidDays = [] }) {
   const total = useMemo(() => {
     let count = 0
     HARI.forEach(h => WAKTU_SHALAT.forEach(w => { if (data[h]?.[w]) count++ }))
     return count
   }, [data])
 
+  const maxPossible = (7 - haidDays.length) * 5
+
   function isRowAllChecked(waktu) {
-    return HARI.every(h => data[h]?.[waktu])
+    return HARI.filter(h => !haidDays.includes(h)).every(h => data[h]?.[waktu])
   }
 
   function toggleRow(waktu) {
     const allChecked = isRowAllChecked(waktu)
-    HARI.forEach(h => onChange(h, waktu, !allChecked))
+    HARI.forEach(h => {
+      if (!haidDays.includes(h)) onChange(h, waktu, !allChecked)
+    })
   }
 
   function toggleAll() {
-    const allChecked = total === 35
-    HARI.forEach(h => WAKTU_SHALAT.forEach(w => onChange(h, w, !allChecked)))
+    const allChecked = total === maxPossible
+    HARI.forEach(h => {
+      if (!haidDays.includes(h)) WAKTU_SHALAT.forEach(w => onChange(h, w, !allChecked))
+    })
   }
 
   return (
     <div className="shalat-section">
       <div className="shalat-info">
-        <span className="shalat-info__count">{total}/35 waktu</span>
+        <span className="shalat-info__count">{total}/{maxPossible} waktu</span>
         <button
           type="button"
-          className={`bulk-check-btn ${total === 35 ? 'bulk-check-btn--active' : ''}`}
+          className={`bulk-check-btn ${total === maxPossible ? 'bulk-check-btn--active' : ''}`}
           onClick={toggleAll}
-          title={total === 35 ? 'Hapus centang semua' : 'Centang semua'}
+          title={total === maxPossible ? 'Hapus centang semua' : 'Centang semua'}
         >
           <Check size={12} strokeWidth={3} />
-          {total === 35 ? 'Batal Semua' : 'Centang Semua'}
+          {total === maxPossible ? 'Batal Semua' : 'Centang Semua'}
         </button>
       </div>
       <div className="shalat-grid" role="grid">
         <div className="shalat-grid__header">
           <div className="shalat-grid__corner"></div>
-          {HARI_SHORT.map(h => (
-            <div key={h} className="shalat-grid__day-label">{h}</div>
+          {HARI_SHORT.map((h, idx) => (
+            <div key={h} className={`shalat-grid__day-label ${haidDays.includes(HARI[idx]) ? 'shalat-grid__day-label--haid' : ''}`}>
+              {h}
+              {haidDays.includes(HARI[idx]) && <Droplet size={8} className="haid-indicator" />}
+            </div>
           ))}
         </div>
         {WAKTU_SHALAT.map(waktu => {
@@ -105,17 +114,19 @@ function SholatFarduGrid({ data, onChange, onCheckAllRow, onCheckAllGrid }) {
                 {waktu}
               </button>
               {HARI.map((hari, idx) => {
+                const isHaid = haidDays.includes(hari)
                 const checked = data[hari]?.[waktu] || false
                 return (
                   <button
                     key={`${hari}-${waktu}`}
                     type="button"
                     role="gridcell"
-                    className={`shalat-grid__cell ${checked ? 'shalat-grid__cell--active' : ''}`}
-                    onClick={() => onChange(hari, waktu, !checked)}
-                    aria-label={`${waktu} ${HARI_SHORT[idx]} - ${checked ? 'sudah' : 'belum'}`}
+                    className={`shalat-grid__cell ${checked ? 'shalat-grid__cell--active' : ''} ${isHaid ? 'shalat-grid__cell--disabled' : ''}`}
+                    onClick={() => !isHaid && onChange(hari, waktu, !checked)}
+                    disabled={isHaid}
+                    aria-label={isHaid ? `${waktu} ${HARI_SHORT[idx]} - haid` : `${waktu} ${HARI_SHORT[idx]} - ${checked ? 'sudah' : 'belum'}`}
                   >
-                    {checked ? <Check size={14} strokeWidth={3} /> : null}
+                    {isHaid ? <Droplet size={10} /> : checked ? <Check size={14} strokeWidth={3} /> : null}
                   </button>
                 )
               })}
@@ -128,12 +139,14 @@ function SholatFarduGrid({ data, onChange, onCheckAllRow, onCheckAllGrid }) {
 }
 
 
-function BerjamaahGrid({ data, onChange }) {
+function BerjamaahGrid({ data, onChange, haidDays = [] }) {
   const total = useMemo(() => {
     let count = 0
     HARI.forEach(h => WAKTU_SHALAT.forEach(w => { if (data[h]?.[w] === 'jamaah') count++ }))
     return count
   }, [data])
+
+  const maxPossible = (7 - haidDays.length) * 5
 
   function cycleValue(current) {
     const order = ['tidak', 'jamaah', 'munfarid']
@@ -154,17 +167,21 @@ function BerjamaahGrid({ data, onChange }) {
   }
 
   function isRowAllJamaah(waktu) {
-    return HARI.every(h => data[h]?.[waktu] === 'jamaah')
+    return HARI.filter(h => !haidDays.includes(h)).every(h => data[h]?.[waktu] === 'jamaah')
   }
 
   function toggleRow(waktu) {
     const allJamaah = isRowAllJamaah(waktu)
-    HARI.forEach(h => onChange(h, waktu, allJamaah ? 'tidak' : 'jamaah'))
+    HARI.forEach(h => {
+      if (!haidDays.includes(h)) onChange(h, waktu, allJamaah ? 'tidak' : 'jamaah')
+    })
   }
 
   function toggleAll() {
-    const allJamaah = total === 35
-    HARI.forEach(h => WAKTU_SHALAT.forEach(w => onChange(h, w, allJamaah ? 'tidak' : 'jamaah')))
+    const allJamaah = total === maxPossible
+    HARI.forEach(h => {
+      if (!haidDays.includes(h)) WAKTU_SHALAT.forEach(w => onChange(h, w, allJamaah ? 'tidak' : 'jamaah'))
+    })
   }
 
   return (
@@ -173,12 +190,12 @@ function BerjamaahGrid({ data, onChange }) {
         <span className="shalat-info__count">{total} berjamaah</span>
         <button
           type="button"
-          className={`bulk-check-btn ${total === 35 ? 'bulk-check-btn--active' : ''}`}
+          className={`bulk-check-btn ${total === maxPossible ? 'bulk-check-btn--active' : ''}`}
           onClick={toggleAll}
-          title={total === 35 ? 'Reset semua' : 'Semua Jamaah'}
+          title={total === maxPossible ? 'Reset semua' : 'Semua Jamaah'}
         >
           <Check size={12} strokeWidth={3} />
-          {total === 35 ? 'Batal Semua' : 'Semua Jamaah'}
+          {total === maxPossible ? 'Batal Semua' : 'Semua Jamaah'}
         </button>
       </div>
       <div className="jamaah-legend" style={{ marginBottom: 'var(--space-2)' }}>
@@ -195,8 +212,8 @@ function BerjamaahGrid({ data, onChange }) {
       <div className="shalat-grid" role="grid">
         <div className="shalat-grid__header">
           <div className="shalat-grid__corner"></div>
-          {HARI_SHORT.map(h => (
-            <div key={h} className="shalat-grid__day-label">{h}</div>
+          {HARI_SHORT.map((h, idx) => (
+            <div key={h} className={`shalat-grid__day-label ${haidDays.includes(HARI[idx]) ? 'shalat-grid__day-label--haid' : ''}`}>{h}</div>
           ))}
         </div>
         {WAKTU_SHALAT.map(waktu => {
@@ -212,17 +229,19 @@ function BerjamaahGrid({ data, onChange }) {
                 {waktu}
               </button>
               {HARI.map((hari, idx) => {
+                const isHaid = haidDays.includes(hari)
                 const val = data[hari]?.[waktu] || 'tidak'
                 return (
                   <button
                     key={`${hari}-${waktu}`}
                     type="button"
                     role="gridcell"
-                    className={`shalat-grid__cell jamaah-grid__cell ${getCellClass(val)}`}
-                    onClick={() => onChange(hari, waktu, cycleValue(val))}
-                    aria-label={`${waktu} ${HARI_SHORT[idx]} - ${val}`}
+                    className={`shalat-grid__cell jamaah-grid__cell ${isHaid ? 'shalat-grid__cell--disabled' : getCellClass(val)}`}
+                    onClick={() => !isHaid && onChange(hari, waktu, cycleValue(val))}
+                    disabled={isHaid}
+                    aria-label={isHaid ? `${waktu} ${HARI_SHORT[idx]} - haid` : `${waktu} ${HARI_SHORT[idx]} - ${val}`}
                   >
-                    {getCellIcon(val)}
+                    {isHaid ? <Droplet size={10} /> : getCellIcon(val)}
                   </button>
                 )
               })}
@@ -279,7 +298,7 @@ export default function InputMutabaah() {
   const { user } = useAuth()
   const {
     weekData, weekInfo, updateField,
-    updateSholatFardu, updateBerjamaah,
+    updateSholatFardu, updateBerjamaah, updateHariHaid,
     calculatePercentages, submitWeek
   } = useMutabaah()
 
@@ -294,8 +313,10 @@ export default function InputMutabaah() {
   const [submitted, setSubmitted] = useState(false)
 
   const tingkatan = getEffectiveTingkatan(user)
-  const targets = TARGET_AMALAN[tingkatan]
+  const haidDays = (weekData.hari_haid || []).length
+  const targets = haidDays > 0 ? getAdjustedTargets(tingkatan, haidDays) : TARGET_AMALAN[tingkatan]
   const percentages = calculatePercentages(tingkatan)
+  const isAkhwat = user?.gender === 'akhwat'
 
   function toggleSection(key) {
     setOpenSections(prev => ({ ...prev, [key]: !prev[key] }))
@@ -353,6 +374,51 @@ export default function InputMutabaah() {
             </div>
           </div>
 
+          {/* Haid Tracking — Akhwat Only */}
+          {isAkhwat && (
+            <div className="haid-section card">
+              <div className="card__body">
+                <div className="haid-section__header">
+                  <div className="haid-section__title-row">
+                    <Droplet size={18} className="haid-section__icon" />
+                    <div>
+                      <h3 className="haid-section__title">Tandai Hari Haid</h3>
+                      <p className="haid-section__subtitle">
+                        Pilih hari dimana Anda sedang haid pekan ini. Target amalan akan otomatis disesuaikan.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="haid-section__days">
+                  {HARI.map((hari, idx) => {
+                    const isHaid = (weekData.hari_haid || []).includes(hari)
+                    return (
+                      <button
+                        key={hari}
+                        type="button"
+                        className={`haid-section__day-btn ${isHaid ? 'haid-section__day-btn--active' : ''}`}
+                        onClick={() => updateHariHaid(hari, !isHaid)}
+                        title={isHaid ? `Batalkan haid ${hari}` : `Tandai haid ${hari}`}
+                      >
+                        <span className="haid-section__day-label">{HARI_SHORT[idx]}</span>
+                        {isHaid && <Droplet size={12} />}
+                      </button>
+                    )
+                  })}
+                </div>
+                {haidDays > 0 && (
+                  <div className="haid-section__info">
+                    <Info size={14} />
+                    <span>
+                      {haidDays} hari haid — target sholat, jamaah, dhuha, dan puasa disesuaikan.
+                      Streak dan tilawah tidak terpengaruh.
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
         {/* Section 1: Sholat Fardu */}
         <div className="input-section card">
           <SectionHeader
@@ -371,6 +437,7 @@ export default function InputMutabaah() {
               <SholatFarduGrid
                 data={weekData.sholat_fardu}
                 onChange={updateSholatFardu}
+                haidDays={weekData.hari_haid || []}
               />
             </div>
           )}
@@ -394,6 +461,7 @@ export default function InputMutabaah() {
               <BerjamaahGrid
                 data={weekData.shalat_berjamaah}
                 onChange={updateBerjamaah}
+                haidDays={weekData.hari_haid || []}
               />
             </div>
           )}

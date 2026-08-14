@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import {
   LayoutDashboard, ClipboardList, BarChart3, User,
   LogOut, ChevronLeft, Menu, X, HelpCircle, Users, Settings, Shield, LifeBuoy,
-  Trophy, FileText
+  Trophy, FileText, StickyNote
 } from 'lucide-react'
 import { useState } from 'react'
 import './Layout.css'
@@ -30,6 +30,7 @@ function getNavItems(role) {
         { to: '/laporan', icon: BarChart3, label: 'Laporan' },
         { to: '/leaderboard', icon: Trophy, label: 'Leaderboard' },
         { to: '/rapor-bulanan', icon: FileText, label: 'Rapor Bulanan' },
+        { to: '/upa-notes', icon: StickyNote, label: 'UPA Notes' },
         { to: '/helpdesk', icon: LifeBuoy, label: 'Helpdesk' },
         { to: '/panduan', icon: HelpCircle, label: 'Panduan' },
         { to: '/profil', icon: User, label: 'Profil' },
@@ -54,7 +55,7 @@ function getPageTitles(role) {
     case 'yayasan':
       return { ...base, '/': 'Dashboard Admin', '/kelola-user': 'Kelola User', '/kelola-grup': 'Kelola Grup', '/helpdesk-admin': 'Helpdesk' }
     case 'pembina':
-      return { ...base, '/anggota': 'Anggota Grup' }
+      return { ...base, '/anggota': 'Anggota Grup', '/upa-notes': 'UPA Notes' }
     default:
       return base
   }

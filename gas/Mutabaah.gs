@@ -19,6 +19,9 @@ const TARGET = {
   }
 };
 
+// Ibadah affected by haid — same as frontend
+const IBADAH_TERDAMPAK_HAID = ['sholat_fardu', 'shalat_berjamaah', 'sholat_dhuha', 'shaum'];
+
 /**
  * Submit mutabaah data for a week
  * data: { userId, grupId, tingkatan, pekan, tahun, weekData }
@@ -218,7 +221,8 @@ function getDashboardData(userId) {
     currentWeek: currentWeek.exists ? {
       percentages: calculateServerPercentages(
         currentWeek.data || {},
-        user.tingkatan || 'muda'
+        user.tingkatan || 'muda',
+        (currentWeek.data && currentWeek.data.hari_haid) ? currentWeek.data.hari_haid.length : 0
       ),
       submittedAt: currentWeek.record ? currentWeek.record.tanggal_submit : null,
     } : null,
@@ -332,8 +336,14 @@ function buildMutabaahRow(headers, data, weekData) {
   setCol(row, headers, 'kehadiran_upa', weekData.kehadiran_upa || 'hadir');
   setCol(row, headers, 'terlambat_upa_menit', parseInt(weekData.terlambat_upa_menit) || 0);
 
-  // Compute percentages
-  const pct = calculateServerPercentages(weekData, data.tingkatan || 'muda');
+  // Haid tracking
+  var hariHaid = weekData.hari_haid || [];
+  setCol(row, headers, 'hari_haid', Array.isArray(hariHaid) ? hariHaid.join(',') : '');
+  setCol(row, headers, 'hari_haid_count', Array.isArray(hariHaid) ? hariHaid.length : 0);
+
+  // Compute percentages (with haid adjustment)
+  var haidDays = Array.isArray(hariHaid) ? hariHaid.length : 0;
+  const pct = calculateServerPercentages(weekData, data.tingkatan || 'muda', haidDays);
   setCol(row, headers, 'persen_sholat_fardu', pct.sholat_fardu || 0);
   setCol(row, headers, 'persen_berjamaah', pct.shalat_berjamaah || 0);
   setCol(row, headers, 'persen_sholat_dhuha', pct.sholat_dhuha || 0);
@@ -384,14 +394,27 @@ function parseRecordToWeekData(record) {
     qiyamullail: parseInt(record.qiyamullail) || 0,
     kehadiran_upa: record.kehadiran_upa || 'hadir',
     terlambat_upa_menit: parseInt(record.terlambat_upa_menit) || 0,
+    hari_haid: record.hari_haid ? String(record.hari_haid).split(',').filter(Boolean) : [],
   };
 }
 
 /**
- * Calculate percentages on server side
+ * Calculate percentages on server side (with optional haid adjustment)
  */
-function calculateServerPercentages(weekData, tingkatan) {
-  const target = TARGET[tingkatan] || TARGET['muda'];
+function calculateServerPercentages(weekData, tingkatan, haidDays) {
+  haidDays = parseInt(haidDays) || 0;
+  var target = JSON.parse(JSON.stringify(TARGET[tingkatan] || TARGET['muda']));
+
+  // Adjust targets for haid
+  if (haidDays > 0) {
+    var activeDays = Math.max(7 - haidDays, 0);
+    var ratio = activeDays / 7;
+    IBADAH_TERDAMPAK_HAID.forEach(function(key) {
+      if (target[key] !== undefined) {
+        target[key] = Math.round(target[key] * ratio * 10) / 10;
+      }
+    });
+  }
 
   // Count sholat fardu
   let totalSholat = 0;
@@ -413,13 +436,18 @@ function calculateServerPercentages(weekData, tingkatan) {
 
   const tilawahTotal = (parseFloat(weekData.tilawah_juz) || 0) + ((parseFloat(weekData.tilawah_halaman) || 0) / 20);
 
-  const pctSholat = Math.min(Math.round((totalSholat / target.sholat_fardu) * 100), 100);
-  const pctJamaah = Math.min(Math.round((totalJamaah / target.shalat_berjamaah) * 100), 100);
-  const pctDhuha = Math.min(Math.round(((parseInt(weekData.sholat_dhuha) || 0) / target.sholat_dhuha) * 100), 100);
-  const pctTilawah = Math.min(Math.round((tilawahTotal / target.tilawah) * 100), 100);
-  const pctMatsurat = Math.min(Math.round(((parseInt(weekData.matsurat) || 0) / target.matsurat) * 100), 100);
-  const pctShaum = Math.min(Math.round(((parseInt(weekData.shaum) || 0) / target.shaum) * 100), 100);
-  const pctQiyam = Math.min(Math.round(((parseInt(weekData.qiyamullail) || 0) / target.qiyamullail) * 100), 100);
+  function safePct(actual, targetVal) {
+    if (targetVal <= 0) return haidDays >= 7 ? 100 : 0;
+    return Math.min(Math.round((actual / targetVal) * 100), 100);
+  }
+
+  const pctSholat = safePct(totalSholat, target.sholat_fardu);
+  const pctJamaah = safePct(totalJamaah, target.shalat_berjamaah);
+  const pctDhuha = safePct(parseInt(weekData.sholat_dhuha) || 0, target.sholat_dhuha);
+  const pctTilawah = safePct(tilawahTotal, target.tilawah);
+  const pctMatsurat = safePct(parseInt(weekData.matsurat) || 0, target.matsurat);
+  const pctShaum = safePct(parseInt(weekData.shaum) || 0, target.shaum);
+  const pctQiyam = safePct(parseInt(weekData.qiyamullail) || 0, target.qiyamullail);
 
   const rataRata = Math.round((pctSholat + pctJamaah + pctDhuha + pctTilawah + pctMatsurat + pctShaum + pctQiyam) / 7);
 

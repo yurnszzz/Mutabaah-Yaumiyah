@@ -118,8 +118,6 @@ function PasswordInput({ value, onChange, placeholder, disabled, id }) {
   )
 }
 
-const GELAR_OPTIONS = ['Ust.', 'Ustadzah']
-
 export default function Login() {
   const {
     loginWithPassword, registerWithPassword, handleGoogleLogin,
@@ -139,8 +137,6 @@ export default function Login() {
   const [tingkatan, setTingkatan] = useState('muda') // 'muda' | 'pratama'
   const [gender, setGender] = useState('ikhwan') // 'ikhwan' | 'akhwat'
   const [namaPembina, setNamaPembina] = useState('')
-  const [gelarPembina, setGelarPembina] = useState('Ust.')
-  const [gelarSelf, setGelarSelf] = useState('Ust.') // gelar for pembina's own name
   const [localError, setLocalError] = useState('')
   const [googleEmail, setGoogleEmail] = useState('') // for Google auto-fill
   const [googleAutoRegister, setGoogleAutoRegister] = useState(false) // auto-redirect from sign-in
@@ -198,20 +194,23 @@ export default function Login() {
 
     if (!nama.trim() || !email.trim() || !password) return
 
-    // Build full pembina name with gelar (for anggota referencing their pembina)
+    // Auto-derive gelar from gender
+    const gelar = gender === 'akhwat' ? 'Ustadzah' : 'Ust.'
+
+    // Build full pembina name with auto-gelar (for anggota referencing their pembina)
     let fullPembinaName = ''
     if (role === 'anggota') {
       if (!namaPembina.trim()) {
         setLocalError('Nama pembina wajib diisi')
         return
       }
-      fullPembinaName = gelarPembina + ' ' + namaPembina.trim()
+      fullPembinaName = gelar + ' ' + namaPembina.trim()
     }
 
-    // For pembina: prepend gelar to their own name
+    // For pembina: auto-prepend gelar to their own name
     let finalNama = nama.trim()
     if (role === 'pembina') {
-      finalNama = gelarSelf + ' ' + finalNama
+      finalNama = gelar + ' ' + finalNama
     }
 
     if (password.length < 6) {
@@ -440,7 +439,7 @@ export default function Login() {
                     <button
                       type="button"
                       className={`login-form__gender-btn ${gender === 'ikhwan' ? 'login-form__gender-btn--active' : ''}`}
-                      onClick={() => { setGender('ikhwan'); setGelarPembina('Ust.'); setGelarSelf('Ust.') }}
+                      onClick={() => setGender('ikhwan')}
                       disabled={isLoading}
                     >
                       <Users size={14} /> Ikhwan
@@ -448,7 +447,7 @@ export default function Login() {
                     <button
                       type="button"
                       className={`login-form__gender-btn ${gender === 'akhwat' ? 'login-form__gender-btn--active login-form__gender-btn--akhwat' : ''}`}
-                      onClick={() => { setGender('akhwat'); setGelarPembina('Ustadzah'); setGelarSelf('Ustadzah') }}
+                      onClick={() => setGender('akhwat')}
                       disabled={isLoading}
                     >
                       <User size={14} /> Akhwat
@@ -503,59 +502,25 @@ export default function Login() {
 
 
 
-                {/* Gelar selector for PEMBINA's own name */}
-                {role === 'pembina' && (
-                  <>
-                    <div className="login-form__select-wrapper">
-                      <User size={18} className="login-form__icon" />
-                      <select
-                        className="login-form__select"
-                        value={gelarSelf}
-                        onChange={e => setGelarSelf(e.target.value)}
-                        disabled={isLoading}
-                      >
-                        <option value="Ust.">Gelar: Ust. (Ikhwan)</option>
-                        <option value="Ustadzah">Gelar: Ustadzah (Akhwat)</option>
-                      </select>
-                      <ChevronDown size={16} className="login-form__chevron" />
-                    </div>
-                    <p className="login-form__hint">
-                      Gelar akan ditambahkan di depan nama Anda. Contoh: "{gelarSelf} {nama || '...'}"
-                    </p>
-                  </>
-                )}
 
-                {/* Nama Pembina with Gelar prefix (required for anggota) */}
+
+                {/* Nama Pembina (required for anggota) */}
                 {role === 'anggota' && (
                   <>
-                    <div className="login-form__pembina-group">
-                      <div className="login-form__gelar-wrapper">
-                        <select
-                          className="login-form__gelar-select"
-                          value={gelarPembina}
-                          onChange={e => setGelarPembina(e.target.value)}
-                          disabled={isLoading}
-                        >
-                          {GELAR_OPTIONS.map(g => (
-                            <option key={g} value={g}>{g}</option>
-                          ))}
-                        </select>
-                        <ChevronDown size={14} className="login-form__gelar-chevron" />
-                      </div>
-                      <div className="login-form__input-wrapper login-form__input-wrapper--pembina">
-                        <input
-                          type="text"
-                          className="login-form__input"
-                          placeholder="Nama pembina"
-                          value={namaPembina}
-                          onChange={e => setNamaPembina(e.target.value)}
-                          disabled={isLoading || !!searchParams.get('pembina')}
-                          required
-                        />
-                      </div>
+                    <div className="login-form__input-wrapper">
+                      <Shield size={18} className="login-form__icon" />
+                      <input
+                        type="text"
+                        className="login-form__input"
+                        placeholder="Nama pembina (tanpa gelar)"
+                        value={namaPembina}
+                        onChange={e => setNamaPembina(e.target.value)}
+                        disabled={isLoading || !!searchParams.get('pembina')}
+                        required
+                      />
                     </div>
                     <p className="login-form__hint">
-                      Pilih gelar lalu masukkan nama pembina Anda. Anggota dengan pembina yang sama akan masuk ke grup yang sama.
+                      Masukkan nama pembina Anda. Gelar ({gender === 'akhwat' ? 'Ustadzah' : 'Ust.'}) akan otomatis ditambahkan. Anggota dengan pembina yang sama akan masuk ke grup yang sama.
                     </p>
                   </>
                 )}

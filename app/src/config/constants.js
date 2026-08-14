@@ -78,3 +78,38 @@ export function getEffectiveTingkatan(user) {
   if (user.role === 'pembina' || user.role === 'yayasan') return 'pratama'
   return user.tingkatan || 'muda'
 }
+
+/**
+ * Ibadah categories affected by haid (menstruation).
+ * During haid, these targets are proportionally reduced.
+ * Tilawah, matsurat, and qiyamullail are NOT affected.
+ */
+export const IBADAH_TERDAMPAK_HAID = ['sholat_fardu', 'shalat_berjamaah', 'sholat_dhuha', 'shaum']
+
+/**
+ * Adjust targets based on haid days.
+ * haidDays = number of days marked as haid (0-7)
+ * Returns adjusted target object with reduced values for affected ibadah.
+ */
+export function getAdjustedTargets(tingkatan, haidDays = 0) {
+  const base = TARGET_AMALAN[tingkatan] || TARGET_AMALAN['muda']
+  if (haidDays <= 0) return base
+
+  const activeDays = Math.max(7 - haidDays, 0)
+  const ratio = activeDays / 7
+
+  const adjusted = {}
+  Object.keys(base).forEach(key => {
+    if (IBADAH_TERDAMPAK_HAID.includes(key)) {
+      adjusted[key] = {
+        ...base[key],
+        target: Math.round(base[key].target * ratio * 10) / 10, // round to 1 decimal
+        originalTarget: base[key].target,
+        isAdjusted: haidDays > 0,
+      }
+    } else {
+      adjusted[key] = { ...base[key] }
+    }
+  })
+  return adjusted
+}

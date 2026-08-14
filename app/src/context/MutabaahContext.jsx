@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react'
-import { HARI, WAKTU_SHALAT, TARGET_AMALAN, HALAMAN_PER_JUZ } from '../config/constants'
+import { HARI, WAKTU_SHALAT, TARGET_AMALAN, HALAMAN_PER_JUZ, getAdjustedTargets, IBADAH_TERDAMPAK_HAID } from '../config/constants'
 import {
   submitMutabaah as apiSubmit,
   resetWeek as apiReset,
@@ -35,6 +35,7 @@ function createEmptyWeekData() {
     qiyamullail: 0,
     kehadiran_upa: 'hadir',
     terlambat_upa_menit: 0,
+    hari_haid: [], // Array of day names (e.g. ['Senin', 'Selasa']) for akhwat menstruation tracking
   }
 }
 
@@ -63,9 +64,9 @@ function calculateTotals(data) {
   }
 }
 
-// Calculate percentages per amalan
-function calculatePercentages(totals, tingkatan) {
-  const targets = TARGET_AMALAN[tingkatan]
+// Calculate percentages per amalan (with optional haid adjustment)
+function calculatePercentages(totals, tingkatan, haidDays = 0) {
+  const targets = haidDays > 0 ? getAdjustedTargets(tingkatan, haidDays) : (TARGET_AMALAN[tingkatan] || TARGET_AMALAN['muda'])
   if (!targets) return {}
 
   const result = {}
@@ -75,7 +76,9 @@ function calculatePercentages(totals, tingkatan) {
     result[key] = {
       actual,
       target,
-      percentage: target > 0 ? Math.min(Math.round((actual / target) * 100), 100) : 0,
+      originalTarget: targets[key].originalTarget || target,
+      isAdjusted: targets[key].isAdjusted || false,
+      percentage: target > 0 ? Math.min(Math.round((actual / target) * 100), 100) : (haidDays >= 7 ? 100 : 0),
       label: targets[key].label,
       satuan: targets[key].satuan,
     }
@@ -287,6 +290,32 @@ export function MutabaahProvider({ children }) {
     })
   }, [persistWeekData])
 
+  // Update hari_haid and auto-clear sholat on haid days
+  const updateHariHaid = useCallback((hari, isHaid) => {
+    setWeekData(prev => {
+      const newHaid = isHaid
+        ? [...new Set([...prev.hari_haid, hari])]
+        : prev.hari_haid.filter(h => h !== hari)
+
+      const updated = { ...prev, hari_haid: newHaid }
+
+      // If marking as haid, auto-clear sholat fardu and berjamaah for that day
+      if (isHaid) {
+        updated.sholat_fardu = {
+          ...prev.sholat_fardu,
+          [hari]: Object.fromEntries(WAKTU_SHALAT.map(w => [w, false])),
+        }
+        updated.shalat_berjamaah = {
+          ...prev.shalat_berjamaah,
+          [hari]: Object.fromEntries(WAKTU_SHALAT.map(w => [w, 'tidak'])),
+        }
+      }
+
+      persistWeekData(updated)
+      return updated
+    })
+  }, [persistWeekData])
+
   const submitWeek = useCallback(async (tingkatan) => {
     setIsSubmitting(true)
     setSyncError(null)
@@ -301,6 +330,7 @@ export function MutabaahProvider({ children }) {
         data: weekData,
         totals,
         percentages,
+        hariHaid: weekData.hari_haid || [],
         submittedAt: new Date().toISOString(),
         isTerlambat: false,
       }
@@ -457,11 +487,12 @@ export function MutabaahProvider({ children }) {
       updateField,
       updateSholatFardu,
       updateBerjamaah,
+      updateHariHaid,
       submitWeek,
       resetWeek,
       syncFromServer,
       calculateTotals: () => calculateTotals(weekData),
-      calculatePercentages: (tingkatan) => calculatePercentages(calculateTotals(weekData), tingkatan),
+      calculatePercentages: (tingkatan) => calculatePercentages(calculateTotals(weekData), tingkatan, (weekData.hari_haid || []).length),
     }}>
       {children}
     </MutabaahContext.Provider>
