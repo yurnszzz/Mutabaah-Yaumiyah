@@ -64,7 +64,13 @@ export function AuthProvider({ children }) {
       if (isApiConfigured()) {
         const result = await apiLoginManual(email, password)
         if (result && result.user) {
-          setUser(setUserData(result.user))
+          if (result.user.status === 'pending') {
+            setError('Akun Anda masih menunggu persetujuan pembina. Silakan hubungi pembina Anda.')
+          } else if (result.user.status === 'nonaktif') {
+            setError('Akun Anda telah dinonaktifkan. Hubungi admin untuk informasi.')
+          } else {
+            setUser(setUserData(result.user))
+          }
         } else {
           setError(result?.error || 'Login gagal')
         }
@@ -95,8 +101,13 @@ export function AuthProvider({ children }) {
       if (isApiConfigured()) {
         const result = await apiRegister(email, nama, password, role, tingkatan, namaPembina, gender)
         if (result && result.user) {
-          setUser(setUserData(result.user))
-          setSuccessMessage(result.message || 'Pendaftaran berhasil!')
+          if (result.isPending || result.user.status === 'pending') {
+            // Don't auto-login pending users — show message
+            setSuccessMessage(result.message || 'Pendaftaran berhasil! Akun Anda menunggu persetujuan pembina.')
+          } else {
+            setUser(setUserData(result.user))
+            setSuccessMessage(result.message || 'Pendaftaran berhasil!')
+          }
         } else {
           setError(result?.error || 'Pendaftaran gagal')
         }
@@ -131,6 +142,13 @@ export function AuthProvider({ children }) {
       try {
         const loginResult = await apiLoginGoogle(email)
         if (loginResult && loginResult.user) {
+          if (loginResult.user.status === 'pending') {
+            setError('Akun Anda masih menunggu persetujuan pembina. Silakan hubungi pembina Anda.')
+            return
+          } else if (loginResult.user.status === 'nonaktif') {
+            setError('Akun Anda telah dinonaktifkan. Hubungi admin untuk informasi.')
+            return
+          }
           setUser(setUserData(loginResult.user))
           return
         }

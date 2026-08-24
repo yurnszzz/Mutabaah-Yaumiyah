@@ -164,3 +164,167 @@ function updateUserRole(data) {
   }
   return { error: 'User tidak ditemukan' };
 }
+
+/**
+ * Admin edit user profile (safe fields only)
+ * data: { userId, nama?, role?, tingkatan?, grupId?, status? }
+ * Protected: email, password_hash, gender
+ */
+function adminEditProfile(data) {
+  if (!data.userId) return { error: 'userId diperlukan' };
+
+  var sheet = getSheet('users');
+  var allData = sheet.getDataRange().getValues();
+  var headers = allData[0];
+  var idCol = headers.indexOf('user_id');
+
+  for (var i = 1; i < allData.length; i++) {
+    if (allData[i][idCol] === data.userId) {
+      var rowIdx = i + 1;
+      var changes = [];
+
+      // Allowed fields only
+      var allowedFields = {
+        'nama': data.nama,
+        'role': data.role,
+        'tingkatan': data.tingkatan,
+        'grup_id': data.grupId,
+        'status': data.status,
+      };
+
+      // Validate role
+      if (data.role && ['anggota', 'pembina', 'yayasan'].indexOf(data.role) === -1) {
+        return { error: 'Role tidak valid' };
+      }
+
+      // Validate tingkatan
+      if (data.tingkatan && ['muda', 'pratama'].indexOf(data.tingkatan) === -1) {
+        return { error: 'Tingkatan tidak valid' };
+      }
+
+      // Validate status
+      if (data.status && ['aktif', 'nonaktif', 'pending'].indexOf(data.status) === -1) {
+        return { error: 'Status tidak valid' };
+      }
+
+      for (var field in allowedFields) {
+        var value = allowedFields[field];
+        if (value !== undefined && value !== null) {
+          var col = headers.indexOf(field);
+          if (col >= 0) {
+            sheet.getRange(rowIdx, col + 1).setValue(value);
+            changes.push(field);
+          }
+        }
+      }
+
+      if (changes.length === 0) {
+        return { message: 'Tidak ada perubahan' };
+      }
+
+      // Clear caches
+      var cache = CacheService.getScriptCache();
+      cache.removeAll([
+        'user_id_' + data.userId,
+        'user_' + allData[i][headers.indexOf('email')]
+      ]);
+
+      return { message: 'Profil berhasil diperbarui (' + changes.join(', ') + ')' };
+    }
+  }
+
+  return { error: 'User tidak ditemukan' };
+}
+
+/**
+ * Get pending users (optionally filtered by grup_id for pembina)
+ */
+function getPendingUsers(grupId) {
+  var sheet = getSheet('users');
+  var data = sheet.getDataRange().getValues();
+  var headers = data[0];
+  var statusCol = headers.indexOf('status');
+  var grupCol = headers.indexOf('grup_id');
+
+  var groupSheet = getSheet('groups');
+  var groupData = groupSheet.getDataRange().getValues();
+  var groupHeaders = groupData[0];
+  var gIdCol = groupHeaders.indexOf('grup_id');
+  var gNameCol = groupHeaders.indexOf('nama_grup');
+  var groupMap = {};
+  for (var g = 1; g < groupData.length; g++) {
+    groupMap[groupData[g][gIdCol]] = groupData[g][gNameCol];
+  }
+
+  var pending = [];
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][statusCol] === 'pending') {
+      // Filter by grup if pembina
+      if (grupId && data[i][grupCol] !== grupId) continue;
+
+      var user = {};
+      for (var j = 0; j < headers.length; j++) {
+        if (headers[j] === 'password_hash') continue;
+        user[headers[j]] = data[i][j];
+      }
+      user.grup_nama = groupMap[user.grup_id] || null;
+      pending.push(user);
+    }
+  }
+
+  return { pendingUsers: pending };
+}
+
+/**
+ * Approve pending user registration
+ */
+function approvePendingUser(data) {
+  if (!data.userId) return { error: 'userId diperlukan' };
+
+  var sheet = getSheet('users');
+  var allData = sheet.getDataRange().getValues();
+  var headers = allData[0];
+  var idCol = headers.indexOf('user_id');
+  var statusCol = headers.indexOf('status');
+
+  for (var i = 1; i < allData.length; i++) {
+    if (allData[i][idCol] === data.userId) {
+      if (allData[i][statusCol] !== 'pending') {
+        return { error: 'User ini tidak dalam status pending' };
+      }
+      sheet.getRange(i + 1, statusCol + 1).setValue('aktif');
+      CacheService.getScriptCache().remove('user_' + allData[i][headers.indexOf('email')]);
+      // Send notification
+      try { createNotification(data.userId, 'approval', 'Pendaftaran Disetujui', 'Selamat! Akun Anda telah disetujui. Anda sekarang dapat mengakses semua fitur Mutabaah Yaumiyah.'); } catch(e) {}
+      return { message: 'Pendaftaran berhasil disetujui' };
+    }
+  }
+  return { error: 'User tidak ditemukan' };
+}
+
+/**
+ * Reject pending user registration
+ */
+function rejectPendingUser(data) {
+  if (!data.userId) return { error: 'userId diperlukan' };
+
+  var sheet = getSheet('users');
+  var allData = sheet.getDataRange().getValues();
+  var headers = allData[0];
+  var idCol = headers.indexOf('user_id');
+  var statusCol = headers.indexOf('status');
+
+  for (var i = 1; i < allData.length; i++) {
+    if (allData[i][idCol] === data.userId) {
+      if (allData[i][statusCol] !== 'pending') {
+        return { error: 'User ini tidak dalam status pending' };
+      }
+      sheet.getRange(i + 1, statusCol + 1).setValue('ditolak');
+      CacheService.getScriptCache().remove('user_' + allData[i][headers.indexOf('email')]);
+      // Send notification
+      try { createNotification(data.userId, 'rejection', 'Pendaftaran Ditolak', 'Pendaftaran Anda telah ditolak. Silakan hubungi pembina untuk informasi lebih lanjut.'); } catch(e) {}
+      return { message: 'Pendaftaran ditolak' };
+    }
+  }
+  return { error: 'User tidak ditemukan' };
+}

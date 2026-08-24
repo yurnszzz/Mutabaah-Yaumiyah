@@ -256,7 +256,7 @@ function registerSelf(data) {
     role,
     tingkatan,
     grupId,
-    'aktif',
+    'pending',  // Menunggu persetujuan pembina/admin
     '',     // transisi_dari
     '',     // transisi_mulai
     '',     // transisi_durasi_pekan
@@ -271,8 +271,9 @@ function registerSelf(data) {
   CacheService.getScriptCache().remove('user_' + data.email);
 
   return {
-    message: message,
+    message: message + ' Akun Anda menunggu persetujuan pembina sebelum dapat digunakan.',
     isNewUser: true,
+    isPending: true,
     user: {
       user_id: userId,
       email: data.email,
@@ -281,7 +282,7 @@ function registerSelf(data) {
       tingkatan: tingkatan,
       grup_id: grupId,
       grup_nama: grupNama,
-      status: 'aktif',
+      status: 'pending',
       gender: data.gender || 'ikhwan',
     }
   };

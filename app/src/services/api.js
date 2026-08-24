@@ -536,6 +536,49 @@ export async function deleteUpaNote(data) {
   return apiPost('deleteUpaNote', data);
 }
 
+// ============================================
+// Pending User Management
+// ============================================
+
+/**
+ * Get pending users (optionally filtered by grupId)
+ */
+export async function getPendingUsers(grupId) {
+  return apiGet('getPendingUsers', { grupId: grupId || '' });
+}
+
+/**
+ * Approve a pending user
+ */
+export async function approvePendingUser(userId) {
+  return apiPost('approvePendingUser', { userId });
+}
+
+/**
+ * Reject a pending user
+ */
+export async function rejectPendingUser(userId) {
+  return apiPost('rejectPendingUser', { userId });
+}
+
+// ============================================
+// Notifications
+// ============================================
+
+/**
+ * Get notifications for a user
+ */
+export async function getNotifications(userId) {
+  return apiGet('getNotifications', { userId });
+}
+
+/**
+ * Mark notifications as read
+ */
+export async function markNotificationsRead(userId, notifId) {
+  return apiPost('markNotificationsRead', { userId, notifId: notifId || '' });
+}
+
 /**
  * Generic POST helper - exported for dynamic import in components
  */

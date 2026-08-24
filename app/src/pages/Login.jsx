@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import {
   LogIn, Users, Shield, Star, Mail, ArrowRight,
   Loader2, UserPlus, CheckCircle, Lock, User, Eye, EyeOff, ChevronDown, KeyRound,
-  Sprout, Award, Flame
+  Sprout, Award, Flame, AlertTriangle, ClipboardCheck, X
 } from 'lucide-react'
 import './Login.css'
 
@@ -140,6 +140,8 @@ export default function Login() {
   const [localError, setLocalError] = useState('')
   const [googleEmail, setGoogleEmail] = useState('') // for Google auto-fill
   const [googleAutoRegister, setGoogleAutoRegister] = useState(false) // auto-redirect from sign-in
+  const [showConfirm, setShowConfirm] = useState(false) // registration confirmation modal
+  const [confirmData, setConfirmData] = useState(null) // data to confirm before registering
 
   // Ref to always have current tab value in Google callback (avoids stale closure)
   const tabRef = useRef(tab)
@@ -225,15 +227,41 @@ export default function Login() {
     // Pembina always uses 'pratama' target
     const finalTingkatan = role === 'pembina' ? 'pratama' : tingkatan
 
-    registerWithPassword(
+    // Show confirmation modal instead of submitting directly
+    setConfirmData({
       finalNama,
-      email.trim(),
+      email: email.trim(),
       password,
       role,
       finalTingkatan,
-      role === 'anggota' ? fullPembinaName : null,
-      gender
+      fullPembinaName: role === 'anggota' ? fullPembinaName : null,
+      gender,
+      // Display-friendly values for modal
+      displayGender: gender === 'ikhwan' ? 'Ikhwan' : 'Akhwat',
+      displayRole: role === 'anggota' ? 'Anggota' : role === 'pembina' ? 'Pembina' : 'Yayasan',
+      displayTingkatan: finalTingkatan === 'muda' ? 'Muda' : 'Pratama',
+    })
+    setShowConfirm(true)
+  }
+
+  function handleConfirmRegister() {
+    if (!confirmData) return
+    setShowConfirm(false)
+    registerWithPassword(
+      confirmData.finalNama,
+      confirmData.email,
+      confirmData.password,
+      confirmData.role,
+      confirmData.finalTingkatan,
+      confirmData.fullPembinaName,
+      confirmData.gender
     )
+    setConfirmData(null)
+  }
+
+  function handleCancelConfirm() {
+    setShowConfirm(false)
+    setConfirmData(null)
   }
 
   function handleForgotPassword(e) {
@@ -669,6 +697,68 @@ export default function Login() {
           </span>
         </div>
       </div>
+
+      {/* Registration Confirmation Modal */}
+      {showConfirm && confirmData && (
+        <div className="confirm-overlay" onClick={handleCancelConfirm}>
+          <div className="confirm-modal" onClick={e => e.stopPropagation()}>
+            <button className="confirm-modal__close" onClick={handleCancelConfirm} type="button">
+              <X size={18} />
+            </button>
+            <div className="confirm-modal__icon">
+              <ClipboardCheck size={32} />
+            </div>
+            <h3 className="confirm-modal__title">Konfirmasi Data Pendaftaran</h3>
+            <p className="confirm-modal__desc">Pastikan semua data sudah benar sebelum mendaftar.</p>
+
+            <div className="confirm-modal__data">
+              <div className="confirm-modal__row">
+                <span className="confirm-modal__label">Nama</span>
+                <span className="confirm-modal__value">{confirmData.finalNama}</span>
+              </div>
+              <div className="confirm-modal__row">
+                <span className="confirm-modal__label">Email</span>
+                <span className="confirm-modal__value">{confirmData.email}</span>
+              </div>
+              <div className="confirm-modal__row">
+                <span className="confirm-modal__label">Gender</span>
+                <span className="confirm-modal__value">{confirmData.displayGender}</span>
+              </div>
+              <div className="confirm-modal__row">
+                <span className="confirm-modal__label">Role</span>
+                <span className="confirm-modal__value">{confirmData.displayRole}</span>
+              </div>
+              {confirmData.role !== 'pembina' && (
+                <div className="confirm-modal__row">
+                  <span className="confirm-modal__label">Jenjang</span>
+                  <span className="confirm-modal__value">{confirmData.displayTingkatan}</span>
+                </div>
+              )}
+              {confirmData.fullPembinaName && (
+                <div className="confirm-modal__row">
+                  <span className="confirm-modal__label">Pembina</span>
+                  <span className="confirm-modal__value">{confirmData.fullPembinaName}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="confirm-modal__warning">
+              <AlertTriangle size={14} />
+              <span>Data jenjang dan role tidak bisa diubah sendiri setelah mendaftar. Hubungi admin jika ada kesalahan.</span>
+            </div>
+
+            <div className="confirm-modal__actions">
+              <button type="button" className="confirm-modal__btn confirm-modal__btn--ghost" onClick={handleCancelConfirm}>
+                Kembali
+              </button>
+              <button type="button" className="confirm-modal__btn confirm-modal__btn--primary" onClick={handleConfirmRegister}>
+                <UserPlus size={16} />
+                Ya, Daftarkan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

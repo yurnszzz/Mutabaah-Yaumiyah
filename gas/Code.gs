@@ -118,6 +118,16 @@ function doGet(e) {
         result = getUpaNotes(params.userId);
         break;
 
+      // Pending Users
+      case 'getPendingUsers':
+        result = getPendingUsers(params.grupId || '');
+        break;
+
+      // Notifications
+      case 'getNotifications':
+        result = getNotifications(params.userId);
+        break;
+
       default:
         result = { error: 'Action tidak dikenal: ' + action };
     }
@@ -180,6 +190,18 @@ function doPost(e) {
         break;
       case 'updateProfile':
         result = updateProfile(data);
+        break;
+      case 'adminEditProfile':
+        result = adminEditProfile(data);
+        break;
+      case 'approvePendingUser':
+        result = approvePendingUser(data);
+        break;
+      case 'rejectPendingUser':
+        result = rejectPendingUser(data);
+        break;
+      case 'markNotificationsRead':
+        result = markNotificationsRead(data);
         break;
 
       // Helpdesk
@@ -379,8 +401,9 @@ function migrateAddHaidColumns() {
     }
   }
   
-  // Also ensure upa_notes sheet exists
+  // Also ensure upa_notes and notifications sheets exist
   setupUpaNotesSheet(ss);
+  setupNotificationsSheet(ss);
   
   Logger.log('');
   Logger.log('========================================');

@@ -655,3 +655,204 @@
   background: #fef2f2;
   color: #dc2626;
 }
+
+/* ============================================
+   Admin Edit Profile Modal
+   ============================================ */
+
+.modal-dialog--wide {
+  max-width: 480px;
+}
+
+.edit-profile__readonly {
+  background: var(--bg-page);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin-bottom: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.edit-profile__readonly-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.edit-profile__readonly-label {
+  font-size: var(--text-xs);
+  color: var(--color-gray-400);
+}
+
+.edit-profile__readonly-value {
+  font-size: var(--text-sm);
+  color: var(--color-gray-600);
+  font-weight: var(--weight-medium);
+}
+
+.edit-profile__field {
+  margin-bottom: var(--space-3);
+}
+
+.edit-profile__label {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--color-gray-500);
+  font-weight: var(--weight-semibold);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.edit-profile__input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--color-gray-200);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  background: var(--color-white);
+  transition: border-color 0.2s;
+}
+
+.edit-profile__input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.edit-profile__options {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.edit-profile__option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1.5px solid var(--color-gray-200);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  color: var(--color-gray-500);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.edit-profile__option:hover {
+  border-color: var(--color-primary);
+}
+
+.edit-profile__option--active {
+  border-color: var(--color-primary);
+  background: rgba(79, 70, 229, 0.06);
+  color: var(--color-primary);
+}
+
+.edit-profile__select-wrap {
+  position: relative;
+}
+
+.edit-profile__select {
+  width: 100%;
+  padding: 10px 36px 10px 14px;
+  border: 1.5px solid var(--color-gray-200);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  background: var(--color-white);
+  appearance: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.edit-profile__select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.edit-profile__select-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-gray-400);
+  pointer-events: none;
+}
+
+.edit-profile__status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.edit-profile__note {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  padding: 10px 12px;
+  background: rgba(59, 130, 246, 0.06);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  color: var(--color-gray-500);
+  line-height: 1.4;
+  margin-top: var(--space-3);
+}
+
+.edit-profile__note svg {
+  color: var(--color-primary);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Status badge in table */
+.admin-status {
+  font-size: 11px;
+  font-weight: var(--weight-semibold);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.admin-status--aktif {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.admin-status--nonaktif {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.admin-status--pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* Inactive row */
+.admin-table__row--inactive {
+  opacity: 0.6;
+}
+
+/* Danger button */
+.btn--danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn--danger:hover {
+  background: #dc2626;
+}

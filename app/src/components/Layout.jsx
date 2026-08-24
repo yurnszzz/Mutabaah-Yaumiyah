@@ -6,6 +6,7 @@ import {
   Trophy, FileText, StickyNote
 } from 'lucide-react'
 import { useState } from 'react'
+import NotificationBell from './NotificationBell'
 import './Layout.css'
 
 /**
@@ -233,9 +234,12 @@ export default function Layout() {
 
           <div className="header__actions">
             {user && (
-              <button className="header__avatar" title={user.nama} onClick={() => navigate('/profil')}>
-                {user.nama.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-              </button>
+              <>
+                <NotificationBell />
+                <button className="header__avatar" title={user.nama} onClick={() => navigate('/profil')}>
+                  {user.nama.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                </button>
+              </>
             )}
           </div>
         </header>
