@@ -18,7 +18,7 @@
  */
 
 // ============ KONFIGURASI ============
-const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID_HERE'; // GANTI DENGAN ID SPREADSHEET ANDA
+const SPREADSHEET_ID = '1vUnJO8TDmMztYRNgjz4MnSJbWtZAKZ9mIVi7-lk6_EA';
 const CACHE_DURATION = 21600; // 6 jam dalam detik
 
 // ============ ROUTER ============
@@ -329,94 +329,141 @@ var TAB_COLORS = {
 
 /**
  * ============================================
- * MIGRASI: Tambah kolom haid + sheet upa_notes
+ * MIGRASI OTOMATIS — Jalankan ini 1x setelah update kode
  * ============================================
- * Jalankan SEKALI setelah update kode.
- * AMAN: Tidak menghapus atau mengubah data existing.
+ * AMAN dijalankan berkali-kali (idempotent).
+ * Tidak menghapus data existing.
  * 
- * Menu: Run > migrateAddHaidColumns
+ * Yang dilakukan:
+ * 1. Tambah kolom hari_haid di semua sheet mutabaah_YYYY
+ * 2. Buat sheet upa_notes (jika belum ada)
+ * 3. Buat sheet notifications (jika belum ada)
+ * 4. Buat sheet profile_change_requests (jika belum ada)
+ * 5. Rapikan tab colors & ordering
+ * 6. Pastikan kolom gender ada di users
+ * 
+ * Menu: Run > runMigration
  */
-function migrateAddHaidColumns() {
+function runMigration() {
   var ss = getSpreadsheet();
-  var sheets = ss.getSheets();
-  var migrated = [];
+  var log = [];
 
+  Logger.log('');
+  Logger.log('========================================');
+  Logger.log('  MIGRASI OTOMATIS — Mulai...');
+  Logger.log('========================================');
+  Logger.log('');
+
+  // ── 1. Kolom hari_haid di sheet mutabaah_YYYY ──
+  var sheets = ss.getSheets();
   for (var i = 0; i < sheets.length; i++) {
     var name = sheets[i].getName();
-    
-    // Only process mutabaah_YYYY sheets
     if (name.indexOf('mutabaah_') !== 0) continue;
-    
+
     var sheet = sheets[i];
-    if (sheet.getLastRow() === 0) continue; // empty sheet, skip
-    
+    if (sheet.getLastRow() === 0) continue;
+
     var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    var colsAdded = [];
-    
-    // Check if hari_haid column already exists
+
     if (headers.indexOf('hari_haid') === -1) {
-      // Insert after terlambat_upa_menit (or at end if not found)
       var insertAfter = headers.indexOf('terlambat_upa_menit');
       if (insertAfter === -1) insertAfter = headers.indexOf('persen_sholat_fardu');
       if (insertAfter === -1) insertAfter = headers.length - 1;
-      
-      var insertCol = insertAfter + 2; // 1-indexed, after the target column
-      
-      // Insert 2 new columns
+
+      var insertCol = insertAfter + 2;
+
       sheet.insertColumnAfter(insertAfter + 1);
       sheet.insertColumnAfter(insertAfter + 1);
-      
-      // Set headers
-      sheet.getRange(1, insertCol).setValue('hari_haid');
-      sheet.getRange(1, insertCol).setFontWeight('bold');
-      sheet.getRange(1, insertCol).setBackground('#f3f4f6');
-      
-      sheet.getRange(1, insertCol + 1).setValue('hari_haid_count');
-      sheet.getRange(1, insertCol + 1).setFontWeight('bold');
-      sheet.getRange(1, insertCol + 1).setBackground('#f3f4f6');
-      
-      // Fill existing rows with defaults (empty string and 0)
+
+      sheet.getRange(1, insertCol).setValue('hari_haid').setFontWeight('bold').setBackground('#f3f4f6');
+      sheet.getRange(1, insertCol + 1).setValue('hari_haid_count').setFontWeight('bold').setBackground('#f3f4f6');
+
       var lastRow = sheet.getLastRow();
       if (lastRow > 1) {
-        var emptyRange = sheet.getRange(2, insertCol, lastRow - 1, 1);
-        var zeroRange = sheet.getRange(2, insertCol + 1, lastRow - 1, 1);
-        var emptyVals = [];
-        var zeroVals = [];
+        var emptyVals = [], zeroVals = [];
         for (var r = 0; r < lastRow - 1; r++) {
           emptyVals.push(['']);
           zeroVals.push([0]);
         }
-        emptyRange.setValues(emptyVals);
-        zeroRange.setValues(zeroVals);
+        sheet.getRange(2, insertCol, lastRow - 1, 1).setValues(emptyVals);
+        sheet.getRange(2, insertCol + 1, lastRow - 1, 1).setValues(zeroVals);
       }
-      
-      colsAdded.push('hari_haid', 'hari_haid_count');
-    }
-    
-    if (colsAdded.length > 0) {
-      migrated.push(name + ' (+' + colsAdded.join(', ') + ')');
-      Logger.log('Migrasi ' + name + ': Kolom ' + colsAdded.join(', ') + ' ditambahkan.');
+
+      log.push('+ Kolom hari_haid di ' + name);
+      Logger.log('[OK] ' + name + ': kolom hari_haid + hari_haid_count ditambahkan');
     } else {
-      Logger.log('Sheet ' + name + ': Kolom haid sudah ada, skip.');
+      Logger.log('[SKIP] ' + name + ': kolom haid sudah ada');
     }
   }
-  
-  // Also ensure upa_notes and notifications sheets exist
-  setupUpaNotesSheet(ss);
-  setupNotificationsSheet(ss);
-  
-  Logger.log('');
-  Logger.log('========================================');
-  Logger.log('Migrasi selesai!');
-  Logger.log('========================================');
-  if (migrated.length > 0) {
-    Logger.log('Sheet yang dimigrasi: ' + migrated.join(', '));
+
+  // ── 2. Sheet upa_notes ──
+  var upaSheet = ss.getSheetByName('upa_notes');
+  if (!upaSheet) {
+    setupUpaNotesSheet(ss);
+    log.push('+ Sheet upa_notes');
   } else {
-    Logger.log('Tidak ada sheet yang perlu dimigrasi.');
+    Logger.log('[SKIP] Sheet upa_notes sudah ada');
   }
-  Logger.log('Sheet upa_notes: OK');
+
+  // ── 3. Sheet notifications ──
+  var notifSheet = ss.getSheetByName('notifications');
+  if (!notifSheet) {
+    setupNotificationsSheet(ss);
+    log.push('+ Sheet notifications');
+  } else {
+    Logger.log('[SKIP] Sheet notifications sudah ada');
+  }
+
+  // ── 4. Sheet profile_change_requests (untuk fitur mendatang) ──
+  var pcrSheet = ss.getSheetByName('profile_change_requests');
+  if (!pcrSheet) {
+    createSheetIfNotExists(ss, 'profile_change_requests', [
+      'request_id', 'user_id', 'user_nama', 'field_name',
+      'old_value', 'new_value', 'reason', 'status',
+      'reviewed_by', 'reviewed_at', 'created_at'
+    ]);
+    log.push('+ Sheet profile_change_requests');
+  } else {
+    Logger.log('[SKIP] Sheet profile_change_requests sudah ada');
+  }
+
+  // ── 5. Kolom gender di users ──
+  var usersSheet = ss.getSheetByName('users');
+  if (usersSheet && usersSheet.getLastRow() > 0) {
+    var userHeaders = usersSheet.getRange(1, 1, 1, usersSheet.getLastColumn()).getValues()[0];
+    if (userHeaders.indexOf('gender') === -1) {
+      var nextCol = usersSheet.getLastColumn() + 1;
+      usersSheet.getRange(1, nextCol).setValue('gender').setFontWeight('bold').setBackground('#f3f4f6');
+      log.push('+ Kolom gender di users');
+      Logger.log('[OK] Kolom gender ditambahkan di users');
+    }
+  }
+
+  // ── 6. Tab colors & ordering ──
+  cleanupSheetTabs(ss);
+  Logger.log('[OK] Tab colors & ordering dirapikan');
+
+  // ── Summary ──
   Logger.log('');
-  Logger.log('Data existing TIDAK diubah. Kolom baru diisi default (kosong/0).');
+  Logger.log('========================================');
+  Logger.log('  MIGRASI SELESAI');
+  Logger.log('========================================');
+  if (log.length > 0) {
+    Logger.log('Perubahan yang dilakukan:');
+    for (var l = 0; l < log.length; l++) {
+      Logger.log('  ' + log[l]);
+    }
+  } else {
+    Logger.log('Semua sudah up-to-date. Tidak ada perubahan.');
+  }
+  Logger.log('');
+  Logger.log('Data existing AMAN — tidak ada yang dihapus/diubah.');
+  Logger.log('Selanjutnya: Deploy ulang Web App.');
+}
+
+// Alias agar fungsi lama tetap jalan
+function migrateAddHaidColumns() {
+  runMigration();
 }
 
 /**
@@ -564,7 +611,9 @@ function cleanupSheetTabs(ss) {
     'mutabaah_' + new Date().getFullYear(),
     'rekap_mingguan', 'rapor_bulanan',
     'upa_notes',
+    'notifications',
     'helpdesk_tickets', 'helpdesk_replies',
+    'profile_change_requests',
     'arsip_anggota'
   ];
 
@@ -577,6 +626,8 @@ function cleanupSheetTabs(ss) {
     'helpdesk_tickets': TAB_COLORS.helpdesk,
     'helpdesk_replies': TAB_COLORS.helpdesk,
     'upa_notes': '#7c3aed',
+    'notifications': '#f59e0b',
+    'profile_change_requests': '#9E9E9E',
     'arsip_anggota': TAB_COLORS.arsip,
   };
 
