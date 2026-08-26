@@ -62,6 +62,28 @@ Sheet baru: `notifications` (notif_id, user_id, type, title, message, is_read, c
 
 ---
 
+### D7: Leaderboard Kategori
+**Status:** Selesai
+
+Leaderboard dipecah jadi 3 tab kategori agar tidak tercampur:
+
+| Tab | Isi | Ranking |
+|-----|-----|---------|
+| **Anggota** | Semua anggota aktif | Independen, badge jenjang (Muda/Pratama) |
+| **Pembina** | Semua pembina aktif | Independen, tanpa badge jenjang |
+| **Grup** | Agregat per grup halaqah | Rata-rata skor/streak anggota, badge jumlah anggota |
+
+Masing-masing tab tetap punya toggle **Streak** dan **Skor**.
+
+**Perubahan:**
+- Pembina tidak lagi dilabeli "Pratama" di leaderboard (labelnya "Pembina")
+- Group leaderboard menghitung rata-rata dari semua anggota dalam grup
+- Ranking independen per kategori
+
+**File:** `Leaderboard.jsx` (rewrite), `Leaderboard.css` (+ category tabs)
+
+---
+
 ## Endpoint API Baru v1.3
 
 | Action | Method | Fungsi |
@@ -79,9 +101,11 @@ Sheet baru: `notifications` (notif_id, user_id, type, title, message, is_read, c
 
 ### Backend (GAS)
 1. Update `Admin.gs`, `Users.gs`, `Code.gs`
-2. Tambah `Notifications.gs`
-3. Jalankan `migrateAddHaidColumns()`
-4. Re-deploy Web App
+2. Tambah file baru `Notifications.gs`
+3. Jalankan **`runMigration()`** — otomatis setup semua sheet & kolom baru
+4. Re-deploy Web App (New Deployment)
+
+> Spreadsheet ID sudah di-hardcode di `Code.gs`: `1vUnJO8TDmMztYRNgjz4MnSJbWtZAKZ9mIVi7-lk6_EA`
 
 ### Frontend
 1. `npm run build` → deploy Vercel

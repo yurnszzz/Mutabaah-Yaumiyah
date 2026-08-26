@@ -1,5 +1,42 @@
 /* Leaderboard Page Styles */
 
+/* Category Tabs */
+.lb-categories {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.lb-categories__tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px var(--space-3);
+  border: 1.5px solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  background: var(--color-white);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-gray-500);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.lb-categories__tab:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.lb-categories__tab--active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-white);
+  font-weight: var(--weight-semibold);
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
+}
+
 /* Mode Toggle */
 .lb-toggle {
   display: flex;
