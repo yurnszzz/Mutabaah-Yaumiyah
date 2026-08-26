@@ -143,8 +143,10 @@ export default function Leaderboard() {
                     {item.nama}
                     {isMe && <span className="lb-row__you">Anda</span>}
                   </span>
-                  {item.tingkatan && (
-                    <span className="lb-row__badge">{item.tingkatan}</span>
+                  {(item.role === 'pembina' || item.role === 'yayasan') ? (
+                    <span className="lb-row__badge">{item.role === 'pembina' ? 'Pembina' : 'Yayasan'}</span>
+                  ) : item.tingkatan && (
+                    <span className="lb-row__badge">{item.tingkatan.charAt(0).toUpperCase() + item.tingkatan.slice(1)}</span>
                   )}
                 </div>
                 <div className="lb-row__value">
