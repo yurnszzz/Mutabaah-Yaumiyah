@@ -4,12 +4,15 @@ import { useAuth } from '../context/AuthContext'
 import {
   getGrupAnggota as apiGetGrupAnggota,
   getPembinaGroups as apiGetPembinaGroups,
+  getPendingUsers as apiGetPendingUsers,
+  approvePendingUser as apiApproveUser,
+  rejectPendingUser as apiRejectUser,
   isApiConfigured
 } from '../services/api'
 import {
   Users, BarChart3, ChevronRight, Loader2,
   CheckCircle, XCircle, Clock, UserCheck, Activity, TrendingUp,
-  ChevronDown, Flame
+  ChevronDown, Flame, UserPlus, Link2, Check, AlertTriangle
 } from 'lucide-react'
 import './DashboardAdmin.css'
 
@@ -20,8 +23,11 @@ export default function DashboardPembina() {
   const [myGroups, setMyGroups] = useState([])
   const [selectedGroupId, setSelectedGroupId] = useState(null)
   const [members, setMembers] = useState([])
+  const [pendingUsers, setPendingUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [rataRata, setRataRata] = useState(0)
+  const [linkCopied, setLinkCopied] = useState(false)
+  const [approveLoading, setApproveLoading] = useState(null) // userId being processed
 
   const pembinaUserId = user?.user_id || user?.id
 
@@ -30,9 +36,12 @@ export default function DashboardPembina() {
     loadGroups()
   }, [pembinaUserId])
 
-  // When selected group changes, load members
+  // When selected group changes, load members + pending
   useEffect(() => {
-    if (selectedGroupId) loadMembers(selectedGroupId)
+    if (selectedGroupId) {
+      loadMembers(selectedGroupId)
+      loadPendingUsers(selectedGroupId)
+    }
   }, [selectedGroupId])
 
   async function loadGroups() {
@@ -102,6 +111,71 @@ export default function DashboardPembina() {
     } finally {
       setLoading(false)
     }
+  }
+
+  async function loadPendingUsers(grupId) {
+    try {
+      if (isApiConfigured() && grupId) {
+        const res = await apiGetPendingUsers(grupId)
+        if (res?.users) {
+          setPendingUsers(res.users)
+          return
+        }
+      }
+      setPendingUsers([])
+    } catch (err) {
+      console.error('Failed to load pending users:', err)
+      setPendingUsers([])
+    }
+  }
+
+  async function handleApprove(userId) {
+    setApproveLoading(userId)
+    try {
+      const res = await apiApproveUser(userId)
+      if (res?.error) {
+        alert(res.error)
+      } else {
+        // Remove from pending, reload members
+        setPendingUsers(prev => prev.filter(u => u.user_id !== userId))
+        if (selectedGroupId) loadMembers(selectedGroupId)
+      }
+    } catch (err) {
+      alert('Gagal menyetujui: ' + err.message)
+    } finally {
+      setApproveLoading(null)
+    }
+  }
+
+  async function handleReject(userId, nama) {
+    if (!confirm(`Tolak pendaftaran ${nama}?`)) return
+    setApproveLoading(userId)
+    try {
+      const res = await apiRejectUser(userId)
+      if (res?.error) {
+        alert(res.error)
+      } else {
+        setPendingUsers(prev => prev.filter(u => u.user_id !== userId))
+      }
+    } catch (err) {
+      alert('Gagal menolak: ' + err.message)
+    } finally {
+      setApproveLoading(null)
+    }
+  }
+
+  function copyReferralLink() {
+    if (!selectedGroupId) return
+    const baseUrl = window.location.origin
+    const grupNama = selectedGroup?.nama_grup || user?.nama || ''
+    const link = `${baseUrl}/login?pembina=${encodeURIComponent(grupNama)}&ref=${selectedGroupId}`
+    navigator.clipboard.writeText(link).then(() => {
+      setLinkCopied(true)
+      setTimeout(() => setLinkCopied(false), 2500)
+    }).catch(() => {
+      // Fallback for older browsers
+      prompt('Salin link ini:', link)
+    })
   }
 
   const selectedGroup = myGroups.find(g => g.grup_id === selectedGroupId)
@@ -174,6 +248,91 @@ export default function DashboardPembina() {
               )
             })}
           </div>
+
+          {/* Referral Link */}
+          <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
+            <div className="card__body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-3)' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text)', marginBottom: '2px' }}>
+                  <Link2 size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
+                  Link Undangan Grup
+                </p>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-gray-400)' }}>
+                  Bagikan ke anggota baru agar langsung terdaftar tanpa menunggu persetujuan
+                </p>
+              </div>
+              <button
+                onClick={copyReferralLink}
+                className="admin-action-btn"
+                style={{
+                  padding: '8px 16px', minWidth: 'auto', borderRadius: 'var(--radius-md)',
+                  background: linkCopied ? 'var(--color-success)' : 'var(--color-primary)',
+                  color: 'white', border: 'none', fontSize: 'var(--text-xs)',
+                  display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s'
+                }}
+              >
+                {linkCopied ? <><Check size={14} /> Tersalin</> : <><Link2 size={14} /> Salin Link</>}
+              </button>
+            </div>
+          </div>
+
+          {/* Pending Approval */}
+          {pendingUsers.length > 0 && (
+            <div className="card" style={{ marginBottom: 'var(--space-5)', borderLeft: '4px solid var(--color-accent-dark)' }}>
+              <div className="card__body">
+                <h3 className="admin-overview__title" style={{ color: 'var(--color-accent-dark)' }}>
+                  <UserPlus size={18} />
+                  Menunggu Persetujuan ({pendingUsers.length})
+                </h3>
+
+                <div className="pembina-members">
+                  {pendingUsers.map(pu => (
+                    <div key={pu.user_id} className="pembina-member" style={{ background: 'rgba(245, 158, 11, 0.04)' }}>
+                      <div className="pembina-member__avatar" style={{ background: 'var(--color-accent)', color: 'white' }}>
+                        {pu.nama?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                      </div>
+                      <div className="pembina-member__info">
+                        <p className="pembina-member__name">{pu.nama}</p>
+                        <p className="pembina-member__meta">
+                          {pu.tingkatan ? pu.tingkatan.charAt(0).toUpperCase() + pu.tingkatan.slice(1) : 'Muda'}
+                          {' - '}
+                          {pu.gender === 'akhwat' ? 'Akhwat' : 'Ikhwan'}
+                        </p>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                        <button
+                          onClick={() => handleApprove(pu.user_id)}
+                          disabled={approveLoading === pu.user_id}
+                          style={{
+                            padding: '6px 14px', borderRadius: 'var(--radius-md)',
+                            border: 'none', background: 'var(--color-success)', color: 'white',
+                            fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)',
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+                            opacity: approveLoading === pu.user_id ? 0.6 : 1,
+                          }}
+                        >
+                          <CheckCircle size={13} /> Terima
+                        </button>
+                        <button
+                          onClick={() => handleReject(pu.user_id, pu.nama)}
+                          disabled={approveLoading === pu.user_id}
+                          style={{
+                            padding: '6px 14px', borderRadius: 'var(--radius-md)',
+                            border: '1px solid var(--color-gray-200)', background: 'white', color: 'var(--color-danger)',
+                            fontSize: 'var(--text-xs)', fontWeight: 'var(--weight-semibold)',
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px',
+                            opacity: approveLoading === pu.user_id ? 0.6 : 1,
+                          }}
+                        >
+                          <XCircle size={13} /> Tolak
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Weekly Progress Bar */}
           <div className="card" style={{ marginBottom: 'var(--space-5)' }}>

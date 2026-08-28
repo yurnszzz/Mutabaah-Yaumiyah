@@ -20,19 +20,28 @@ Saat user klik "Daftar", muncul modal konfirmasi menampilkan semua data (nama, e
 
 ---
 
-### D2: Verifikasi Pendaftaran (Pending Approval)
-**Status:** Selesai
+### D2: Verifikasi Pendaftaran (Pending Approval) + Referral Link
+**Status:** Selesai (v1.3.1 fix)
 
-User mendaftar → status `pending` → tidak bisa login sampai disetujui pembina/admin.
-
-**Alur:**
+**Alur Pendaftaran:**
 ```
-Daftar → "pending" → Pembina/Admin approve → "aktif"
-                    → Pembina/Admin reject  → "ditolak"
+Via Referral Link (?ref=grp_xxx) → langsung "aktif" (auto-accept)
+Via Manual (tanpa ref)           → "pending" → menunggu persetujuan pembina
 ```
 
-**Backend:** `getPendingUsers()`, `approvePendingUser()`, `rejectPendingUser()` di `Admin.gs`
-**Frontend:** Auth blokir login pending/nonaktif di `AuthContext.jsx`
+**Pembina mendapat:**
+- Notifikasi saat ada anggota baru mendaftar ke grupnya
+- UI approval di Dashboard Pembina (tombol Terima / Tolak)
+- Tombol "Salin Link Undangan" untuk generate referral link
+
+**User pending mendapat:**
+- Pesan jelas: "Akun Anda menunggu persetujuan dari [nama pembina]. Silakan hubungi pembina Anda."
+- Tidak bisa login sampai disetujui
+
+**Catatan:** Pembina mendaftar langsung aktif (tidak pending).
+
+**Backend:** `registerSelf()` (referral check), `getPendingUsers()`, `approvePendingUser()`, `rejectPendingUser()`
+**Frontend:** `DashboardPembina.jsx` (approval UI + referral link), `AuthContext.jsx`, `Login.jsx`
 
 ---
 

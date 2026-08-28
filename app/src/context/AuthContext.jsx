@@ -65,7 +65,8 @@ export function AuthProvider({ children }) {
         const result = await apiLoginManual(email, password)
         if (result && result.user) {
           if (result.user.status === 'pending') {
-            setError('Akun Anda masih menunggu persetujuan pembina. Silakan hubungi pembina Anda.')
+            const grupNama = result.user.grup_nama || 'pembina Anda'
+            setError('Akun Anda masih menunggu persetujuan dari ' + grupNama + '. Silakan hubungi pembina Anda untuk mempercepat proses persetujuan.')
           } else if (result.user.status === 'nonaktif') {
             setError('Akun Anda telah dinonaktifkan. Hubungi admin untuk informasi.')
           } else {
@@ -91,15 +92,15 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  // Manual registration: nama + email + password + role + tingkatan + namaPembina + gender
-  const registerWithPassword = useCallback(async (nama, email, password, role, tingkatan, namaPembina, gender) => {
+  // Manual registration: nama + email + password + role + tingkatan + namaPembina + gender + referralCode
+  const registerWithPassword = useCallback(async (nama, email, password, role, tingkatan, namaPembina, gender, referralCode) => {
     setIsLoading(true)
     setError(null)
     setSuccessMessage(null)
 
     try {
       if (isApiConfigured()) {
-        const result = await apiRegister(email, nama, password, role, tingkatan, namaPembina, gender)
+        const result = await apiRegister(email, nama, password, role, tingkatan, namaPembina, gender, referralCode)
         if (result && result.user) {
           if (result.isPending || result.user.status === 'pending') {
             // Don't auto-login pending users — show message
@@ -143,7 +144,8 @@ export function AuthProvider({ children }) {
         const loginResult = await apiLoginGoogle(email)
         if (loginResult && loginResult.user) {
           if (loginResult.user.status === 'pending') {
-            setError('Akun Anda masih menunggu persetujuan pembina. Silakan hubungi pembina Anda.')
+            const grupNama = loginResult.user.grup_nama || 'pembina Anda'
+            setError('Akun Anda masih menunggu persetujuan dari ' + grupNama + '. Silakan hubungi pembina Anda untuk mempercepat proses persetujuan.')
             return
           } else if (loginResult.user.status === 'nonaktif') {
             setError('Akun Anda telah dinonaktifkan. Hubungi admin untuk informasi.')

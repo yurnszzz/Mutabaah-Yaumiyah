@@ -142,14 +142,19 @@ export default function Login() {
   const [googleAutoRegister, setGoogleAutoRegister] = useState(false) // auto-redirect from sign-in
   const [showConfirm, setShowConfirm] = useState(false) // registration confirmation modal
   const [confirmData, setConfirmData] = useState(null) // data to confirm before registering
+  const [referralCode, setReferralCode] = useState('') // referral code from pembina link
 
   // Ref to always have current tab value in Google callback (avoids stale closure)
   const tabRef = useRef(tab)
   tabRef.current = tab
 
-  // Check URL params for share link (Item 9: ?pembina=NamaPembina)
+  // Check URL params for share link (?pembina=NamaPembina&ref=grp_xxx)
   useEffect(() => {
     const pembina = searchParams.get('pembina')
+    const refCode = searchParams.get('ref')
+    if (refCode) {
+      setReferralCode(refCode)
+    }
     if (pembina) {
       setTab('register')
       setRole('anggota')
@@ -254,7 +259,8 @@ export default function Login() {
       confirmData.role,
       confirmData.finalTingkatan,
       confirmData.fullPembinaName,
-      confirmData.gender
+      confirmData.gender,
+      referralCode
     )
     setConfirmData(null)
   }

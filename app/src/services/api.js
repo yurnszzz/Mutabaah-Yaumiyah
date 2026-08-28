@@ -343,7 +343,7 @@ export async function getAllGrupRekap(tahun, pekan) {
 /**
  * Self-registration (Google OAuth or manual with password)
  */
-export async function register(email, nama, password, role, tingkatan, namaPembina, gender) {
+export async function register(email, nama, password, role, tingkatan, namaPembina, gender, referralCode) {
   return apiPost('register', {
     email,
     nama,
@@ -352,6 +352,7 @@ export async function register(email, nama, password, role, tingkatan, namaPembi
     tingkatan: tingkatan || 'muda',
     namaPembina: namaPembina || undefined,
     gender: gender || 'ikhwan',
+    referralCode: referralCode || undefined,
   });
 }
 

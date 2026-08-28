@@ -141,7 +141,7 @@ function findGroupByPembinaName(pembinaName) {
   for (var i = 1; i < groupData.length; i++) {
     var grupNama = (groupData[i][namaCol] || '').toString().trim();
     if (namesMatch(grupNama, pembinaName)) {
-      return { grupId: groupData[i][grupIdCol], grupNama: grupNama };
+      return { grupId: groupData[i][grupIdCol], grupNama: grupNama, pembinaUserId: groupData[i][pembinaUserIdCol] || '' };
     }
   }
 
@@ -161,7 +161,8 @@ function findGroupByPembinaName(pembinaName) {
         if (namesMatch(pembinaUserName, pembinaName)) {
           return { 
             grupId: groupData[i][grupIdCol], 
-            grupNama: groupData[i][namaCol] || pembinaUserName 
+            grupNama: groupData[i][namaCol] || pembinaUserName,
+            pembinaUserId: pembinaUserId
           };
         }
         break; // found the pembina user, no need to keep searching
@@ -224,7 +225,7 @@ function registerSelf(data) {
   var message = '';
 
   if (role === 'pembina') {
-    // === PEMBINA: Auto-create group ===
+    // === PEMBINA: Auto-create group, always aktif ===
     grupId = 'grp_' + Utilities.getUuid().substring(0, 8);
     grupNama = data.nama; // Group named after pembina
 
@@ -233,6 +234,11 @@ function registerSelf(data) {
     groupSheet.appendRow([grupId, grupNama, userId, now]);
 
     message = 'Pendaftaran berhasil sebagai Pembina! Grup "' + grupNama + '" telah dibuat otomatis.';
+
+    // Pembina langsung aktif
+    var userStatus = 'aktif';
+    var isPending = false;
+
   } else {
     // === ANGGOTA: Must specify pembina name ===
     if (!data.namaPembina || !data.namaPembina.trim()) {
@@ -242,9 +248,38 @@ function registerSelf(data) {
     if (found) {
       grupId = found.grupId;
       grupNama = found.grupNama;
-      message = 'Pendaftaran berhasil! Anda masuk ke grup "' + grupNama + '".';
     } else {
       return { error: 'Pembina "' + data.namaPembina.trim() + '" belum terdaftar di sistem. Hubungi admin untuk informasi lebih lanjut.' };
+    }
+
+    // Check if registration uses referral code from pembina
+    // Referral code = grup_id (shared by pembina as invite link)
+    var isReferral = data.referralCode && data.referralCode === grupId;
+
+    if (isReferral) {
+      // Referral link → langsung aktif
+      var userStatus = 'aktif';
+      var isPending = false;
+      message = 'Pendaftaran berhasil! Anda langsung masuk ke grup "' + grupNama + '".';
+    } else {
+      // Manual registration → pending approval
+      var userStatus = 'pending';
+      var isPending = true;
+      message = 'Pendaftaran berhasil! Akun Anda menunggu persetujuan dari pembina "' + grupNama + '".';
+    }
+
+    // Notify pembina about new registration
+    try {
+      var pembinaUserId = found.pembinaUserId;
+      if (pembinaUserId) {
+        var notifTitle = isReferral ? 'Anggota Baru Bergabung' : 'Permintaan Anggota Baru';
+        var notifMsg = isReferral
+          ? data.nama + ' telah bergabung ke grup Anda melalui link undangan.'
+          : data.nama + ' mendaftar ke grup Anda dan menunggu persetujuan Anda. Buka menu Kelola Anggota untuk menyetujui.';
+        createNotification(pembinaUserId, 'approval', notifTitle, notifMsg);
+      }
+    } catch(e) {
+      // Don't fail registration if notification fails
     }
   }
 
@@ -256,7 +291,7 @@ function registerSelf(data) {
     role,
     tingkatan,
     grupId,
-    'pending',  // Menunggu persetujuan pembina/admin
+    userStatus,
     '',     // transisi_dari
     '',     // transisi_mulai
     '',     // transisi_durasi_pekan
@@ -270,22 +305,41 @@ function registerSelf(data) {
 
   CacheService.getScriptCache().remove('user_' + data.email);
 
-  return {
-    message: message + ' Akun Anda menunggu persetujuan pembina sebelum dapat digunakan.',
-    isNewUser: true,
-    isPending: true,
-    user: {
-      user_id: userId,
-      email: data.email,
-      nama: data.nama,
-      role: role,
-      tingkatan: tingkatan,
-      grup_id: grupId,
-      grup_nama: grupNama,
-      status: 'pending',
-      gender: data.gender || 'ikhwan',
-    }
-  };
+  if (isPending) {
+    return {
+      message: message,
+      isNewUser: true,
+      isPending: true,
+      user: {
+        user_id: userId,
+        email: data.email,
+        nama: data.nama,
+        role: role,
+        tingkatan: tingkatan,
+        grup_id: grupId,
+        grup_nama: grupNama,
+        status: 'pending',
+        gender: data.gender || 'ikhwan',
+      }
+    };
+  } else {
+    return {
+      message: message,
+      isNewUser: true,
+      isPending: false,
+      user: {
+        user_id: userId,
+        email: data.email,
+        nama: data.nama,
+        role: role,
+        tingkatan: tingkatan,
+        grup_id: grupId,
+        grup_nama: grupNama,
+        status: 'aktif',
+        gender: data.gender || 'ikhwan',
+      }
+    };
+  }
 }
 
 /**
