@@ -162,8 +162,10 @@ export default function Login() {
       const parts = pembina.trim()
       if (parts.startsWith('Ust. ') || parts.startsWith('Ust.')) {
         setNamaPembina(parts.replace(/^Ust\.\s*/, ''))
+        setGender('ikhwan') // Ust. = grup ikhwan
       } else if (parts.startsWith('Ustadzah ')) {
         setNamaPembina(parts.replace(/^Ustadzah\s*/, ''))
+        setGender('akhwat') // Ustadzah = grup akhwat
       } else {
         setNamaPembina(parts)
       }
@@ -524,11 +526,6 @@ export default function Login() {
                         <Award size={14} /> Pratama
                       </button>
                     </div>
-                    <p className="login-form__hint" style={{ marginTop: '4px' }}>
-                      {tingkatan === 'muda'
-                        ? 'Target: Jamaah 14x, Tilawah 1 juz, Shaum 1x/bulan'
-                        : 'Target: Jamaah 21x, Tilawah 3.5 juz, Shaum 2x/bulan'}
-                    </p>
                   </div>
                 )}
 
