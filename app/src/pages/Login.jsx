@@ -158,13 +158,11 @@ export default function Login() {
     if (pembina) {
       setTab('register')
       setRole('anggota')
-      // Split gelar from name if present
+      // Strip gelar prefix if present — gelar is auto-derived from gender in handleRegister
       const parts = pembina.trim()
       if (parts.startsWith('Ust. ') || parts.startsWith('Ust.')) {
-        setGelarPembina('Ust.')
         setNamaPembina(parts.replace(/^Ust\.\s*/, ''))
       } else if (parts.startsWith('Ustadzah ')) {
-        setGelarPembina('Ustadzah')
         setNamaPembina(parts.replace(/^Ustadzah\s*/, ''))
       } else {
         setNamaPembina(parts)
