@@ -10,9 +10,7 @@ import {
   isApiConfigured
 } from '../services/api'
 import {
-  Users, BarChart3, ChevronRight, Loader2,
-  CheckCircle, XCircle, Clock, UserCheck, Activity, TrendingUp,
-  ChevronDown, Flame, UserPlus, Link2, Check, AlertTriangle
+  Users, BarChart3, ChevronRight, Loader2, CheckCircle, XCircle, Clock, UserCheck, Activity, TrendingUp, ChevronDown, Flame, UserPlus, Link2, Check, Copy, Send
 } from 'lucide-react'
 import './DashboardAdmin.css'
 
@@ -164,11 +162,14 @@ export default function DashboardPembina() {
     }
   }
 
+  function getInviteLink() {
+    if (!selectedGroupId) return ''
+    return `${window.location.origin}/daftar?ref=${encodeURIComponent(selectedGroupId)}`
+  }
+
   function copyReferralLink() {
-    if (!selectedGroupId) return
-    const baseUrl = window.location.origin
-    const grupNama = selectedGroup?.nama_grup || user?.nama || ''
-    const link = `${baseUrl}/login?pembina=${encodeURIComponent(grupNama)}&ref=${selectedGroupId}`
+    const link = getInviteLink()
+    if (!link) return
     navigator.clipboard.writeText(link).then(() => {
       setLinkCopied(true)
       setTimeout(() => setLinkCopied(false), 2500)
@@ -176,6 +177,13 @@ export default function DashboardPembina() {
       // Fallback for older browsers
       prompt('Salin link ini:', link)
     })
+  }
+
+  function shareInviteWhatsApp() {
+    const link = getInviteLink()
+    if (!link) return
+    const text = `Assalamu'alaikum. Silakan daftar Mutabaah Yaumiyah lewat link ini, nanti langsung masuk grup ${user?.nama || 'kita'}:\n${link}`
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener')
   }
 
   const selectedGroup = myGroups.find(g => g.grup_id === selectedGroupId)
@@ -249,30 +257,25 @@ export default function DashboardPembina() {
             })}
           </div>
 
-          {/* Referral Link */}
-          <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
-            <div className="card__body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-3)' }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--weight-semibold)', color: 'var(--color-text)', marginBottom: '2px' }}>
-                  <Link2 size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
-                  Link Undangan Grup
-                </p>
-                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-gray-400)' }}>
-                  Bagikan ke anggota baru agar langsung terdaftar tanpa menunggu persetujuan
-                </p>
+          {/* Invite link */}
+          <div className="card invite-card">
+            <div className="card__body">
+              <h3 className="invite-card__title">
+                <Link2 size={18} />
+                Link Pendaftaran Anggota
+              </h3>
+              <p className="invite-card__desc">
+                Kirim link ini ke calon anggota. Yang mendaftar lewat link ini langsung masuk grup {grupNama} tanpa perlu Anda setujui.
+              </p>
+              <p className="invite-card__link">{getInviteLink()}</p>
+              <div className="invite-card__actions">
+                <button type="button" onClick={shareInviteWhatsApp} className="btn btn--primary btn--sm">
+                  <Send size={16} /> Kirim lewat WhatsApp
+                </button>
+                <button type="button" onClick={copyReferralLink} className="btn btn--outline btn--sm">
+                  {linkCopied ? <><Check size={16} /> Tersalin</> : <><Copy size={16} /> Salin Link</>}
+                </button>
               </div>
-              <button
-                onClick={copyReferralLink}
-                className="admin-action-btn"
-                style={{
-                  padding: '8px 16px', minWidth: 'auto', borderRadius: 'var(--radius-md)',
-                  background: linkCopied ? 'var(--color-success)' : 'var(--color-primary)',
-                  color: 'white', border: 'none', fontSize: 'var(--text-xs)',
-                  display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.2s'
-                }}
-              >
-                {linkCopied ? <><Check size={14} /> Tersalin</> : <><Link2 size={14} /> Salin Link</>}
-              </button>
             </div>
           </div>
 

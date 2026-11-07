@@ -1,9 +1,6 @@
 import { useState } from 'react'
 import {
-  HelpCircle, BookOpen, ChevronDown, ChevronUp,
-  ClipboardList, BarChart3, Users, Shield, Star,
-  Smartphone, Globe, CheckCircle, AlertTriangle,
-  Info, User, Calendar, Clock
+  HelpCircle, BookOpen, ChevronDown, ChevronUp, ClipboardList, BarChart3, Shield, Star, Smartphone, Info
 } from 'lucide-react'
 import './Panduan.css'
 

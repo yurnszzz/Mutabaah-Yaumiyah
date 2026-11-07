@@ -1,9 +1,7 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
-  LayoutDashboard, ClipboardList, BarChart3, User,
-  LogOut, ChevronLeft, Menu, X, HelpCircle, Users, Settings, Shield, LifeBuoy,
-  Trophy, FileText, StickyNote
+  LayoutDashboard, ClipboardList, BarChart3, User, LogOut, ChevronLeft, Menu, X, HelpCircle, Users, Shield, LifeBuoy, Trophy, FileText, StickyNote
 } from 'lucide-react'
 import { useState } from 'react'
 import NotificationBell from './NotificationBell'
@@ -47,18 +45,6 @@ function getNavItems(role) {
         { to: '/panduan', icon: HelpCircle, label: 'Panduan' },
         { to: '/profil', icon: User, label: 'Profil' },
       ]
-  }
-}
-
-function getPageTitles(role) {
-  const base = { '/': 'Beranda', '/profil': 'Profil', '/panduan': 'Panduan', '/input': 'Input Mutabaah', '/laporan': 'Laporan', '/helpdesk': 'Helpdesk', '/leaderboard': 'Leaderboard', '/rapor-bulanan': 'Rapor Bulanan' }
-  switch (role) {
-    case 'yayasan':
-      return { ...base, '/': 'Dashboard Admin', '/kelola-user': 'Kelola User', '/kelola-grup': 'Kelola Grup', '/helpdesk-admin': 'Helpdesk' }
-    case 'pembina':
-      return { ...base, '/anggota': 'Anggota Grup', '/upa-notes': 'UPA Notes' }
-    default:
-      return base
   }
 }
 
@@ -177,10 +163,8 @@ export default function Layout() {
 
   const role = user?.role || 'anggota'
   const navItems = getNavItems(role)
-  const pageTitles = getPageTitles(role)
 
   const isHome = location.pathname === '/'
-  const pageTitle = pageTitles[location.pathname] || 'Halaman'
 
   // Bottom nav: show max 4 items (exclude panduan for anggota/pembina on mobile)
   const bottomNavItems = navItems.filter(item => item.to !== '/panduan').slice(0, 4)

@@ -125,13 +125,97 @@
   text-align: center;
 }
 
-.rapor-table__td--success { color: var(--color-success); font-weight: var(--weight-semibold); }
-.rapor-table__td--warning { color: var(--color-accent-dark); font-weight: var(--weight-semibold); }
-.rapor-table__td--danger { color: var(--color-danger); font-weight: var(--weight-semibold); }
+.rapor-table__td--success { color: #15803d; font-weight: var(--weight-semibold); }
+.rapor-table__td--warning { color: #8a5a00; font-weight: var(--weight-semibold); }
+.rapor-table__td--danger { color: #b91c1c; font-weight: var(--weight-semibold); }
+
+.rapor-table__td--count {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.rapor-table__td--count strong {
+  font-size: var(--text-base);
+  color: var(--color-gray-900);
+}
+
+.rapor-table__td--count span {
+  color: var(--color-gray-600);
+}
 
 .rapor-table__footer td {
   background: var(--color-gray-50);
   border-top: 2px solid var(--color-gray-200);
+}
+
+.rapor-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.rapor-table-wrap--bordered {
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-md);
+}
+
+.rapor-note {
+  font-size: var(--text-xs);
+  color: var(--color-gray-600);
+  padding: var(--space-2) var(--space-5) var(--space-3);
+  margin: 0;
+  border-bottom: 1px solid var(--color-gray-100);
+}
+
+/* Per-week count table */
+.rapor-weektable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.rapor-weektable th,
+.rapor-weektable td {
+  padding: 8px 10px;
+  text-align: center;
+  border-bottom: 1px solid var(--color-gray-100);
+  white-space: nowrap;
+}
+
+.rapor-weektable thead th {
+  background: var(--color-gray-50);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-gray-600);
+  vertical-align: top;
+}
+
+.rapor-weektable tbody th {
+  text-align: left;
+  font-weight: var(--weight-medium);
+  color: var(--color-gray-800);
+  position: sticky;
+  left: 0;
+  background: var(--color-white);
+}
+
+.rapor-weektable td.is-success { color: #15803d; }
+.rapor-weektable td.is-warning { color: #8a5a00; }
+.rapor-weektable td.is-danger { color: #b91c1c; }
+
+.rapor-weektable__avg th,
+.rapor-weektable__avg td {
+  font-weight: var(--weight-bold);
+  background: var(--color-gray-50);
+  border-bottom: none;
+}
+
+.rapor-weektable__late {
+  display: block;
+  margin-top: 2px;
+  font-size: 10px;
+  font-weight: var(--weight-semibold);
+  color: #8a5a00;
 }
 
 /* Week breakdown */
@@ -179,10 +263,10 @@
 .rapor-week-chip__value--danger { color: var(--color-danger); }
 
 .rapor-week-chip__late {
-  font-size: 9px;
-  background: var(--color-accent);
-  color: var(--color-white);
-  padding: 1px 4px;
+  font-size: 10px;
+  background: var(--color-accent-bg);
+  color: #8a5a00;
+  padding: 1px 6px;
   border-radius: 3px;
   font-weight: var(--weight-bold);
 }

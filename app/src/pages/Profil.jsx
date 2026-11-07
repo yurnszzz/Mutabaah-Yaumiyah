@@ -7,8 +7,7 @@ import {
   apiPost
 } from '../services/api'
 import {
-  User, Mail, Users, Shield, Award, LogOut, Lock,
-  Eye, EyeOff, Loader2, CheckCircle, KeyRound, Edit3, Link2, Copy, QrCode
+  User, Mail, Users, Award, LogOut, Lock, Eye, EyeOff, Loader2, CheckCircle, KeyRound, Edit3, Link2, Copy
 } from 'lucide-react'
 import './Profil.css'
 
@@ -144,11 +143,11 @@ export default function Profil() {
     }
   }
 
-  // Generate share link for pembina
+  // Invite link for pembina: same format as the dashboard (group id, auto-accept)
   function getShareLink() {
     const baseUrl = window.location.origin
-    const pembinaName = user?.nama || ''
-    return `${baseUrl}/login?pembina=${encodeURIComponent(pembinaName)}`
+    if (user?.grup_id) return `${baseUrl}/daftar?ref=${encodeURIComponent(user.grup_id)}`
+    return `${baseUrl}/daftar?pembina=${encodeURIComponent(user?.nama || '')}`
   }
 
   function copyShareLink() {
@@ -305,7 +304,7 @@ export default function Profil() {
               <h3 className="profil-section__title">Link Pendaftaran Anggota</h3>
             </div>
             <p className="profil-share__desc">
-              Bagikan link ini ke anggota Anda. Nama pembina akan terisi otomatis saat mereka mendaftar.
+              Kirim link ini ke calon anggota. Yang mendaftar lewat link ini langsung masuk grup Anda tanpa perlu disetujui.
             </p>
             <div className="profil-share__link-box">
               <input

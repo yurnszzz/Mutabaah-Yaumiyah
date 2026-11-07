@@ -48,9 +48,9 @@
 | 🕌 Pencatatan Amalan | 📊 Dashboard & Laporan | 🏆 Gamifikasi |
 |:---|:---|:---|
 | Sholat Fardu (5 waktu × 7 hari) | Dashboard personal per role | Leaderboard streak & skor |
-| Shalat Berjamaah (grid) | Riwayat collapsed + expandable | Streak konsistensi pekanan |
-| Sholat Dhuha, Tilawah, Matsurat | Rapor Bulanan (cetak/PDF) | Predikat A–E |
-| Puasa Sunnah, Qiyamullail | Drill-down anggota (pembina) | Badge pencapaian |
+| Shalat Berjamaah (grid) | Riwayat dengan jumlah asli per amalan | Streak konsistensi pekanan |
+| Sholat Dhuha, Tilawah, Matsurat | Rapor Bulanan (cetak/PDF) + rincian per pekan | Predikat A–E |
+| Puasa Sunnah, Qiyamullail | Drill-down anggota (pembina), sholat per hari | Badge pencapaian |
 
 | 👤 Multi-Role | 🎫 Helpdesk | 🔒 Keamanan |
 |:---|:---|:---|
@@ -85,11 +85,12 @@ mutabaah-yaumiyah/
 │   ├── public/
 │   │   └── SIT_MATAHARI_LOGO.png
 │   ├── src/
-│   │   ├── components/           # Layout, Sidebar, Bottom Nav
+│   │   ├── components/           # Layout, NotificationBell, WeekDetail
 │   │   ├── config/               # Constants, amalan targets
 │   │   ├── context/              # AuthContext, MutabaahContext
 │   │   ├── pages/                # 15+ halaman (Dashboard, Input, dll)
 │   │   ├── services/             # API client (IndexedDB cache + retry)
+│   │   ├── utils/                # mutabaahSummary (hitung jumlah vs target)
 │   │   ├── App.jsx               # Router utama
 │   │   ├── main.jsx              # Entry point
 │   │   └── index.css             # Design system global
@@ -110,6 +111,11 @@ mutabaah-yaumiyah/
 ├── docs/                         # Dokumentasi
 │   ├── PRD-Mutabaah-Yaumiyah.md
 │   └── PRD-Addendum-v1.2.md
+│
+├── .agents/                      # Skill & aturan untuk AI agent
+│   ├── rules/frontend-skills.md  # Kapan memakai skill mana
+│   └── skills/                   # taste-skill, ui-ux-pro-max, impeccable,
+│                                 # motion (Framer Motion), stop-slop
 │
 ├── vercel.json                   # Vercel deployment config
 ├── .gitignore
@@ -252,9 +258,10 @@ graph TD
 | `getDashboard` | userId | Dashboard data |
 | `getGrupAnggota` | grupId | List anggota grup |
 | `getGrupRekap` | grupId, tahun, pekan | Rekap grup |
-| `getMemberMutabaah` | pembinaUserId, memberUserId, tahun | Drill-down anggota |
+| `getMemberMutabaah` | pembinaUserId, memberUserId, tahun, limit, offset | Drill-down anggota (termasuk data mentah per pekan) |
 | `getLeaderboard` | mode (streak/score) | Papan peringkat |
-| `getMonthlyReport` | userId, bulan, tahun | Rapor bulanan |
+| `getMonthlyReport` | userId, bulan, tahun | Rapor bulanan (+ `weeks` berisi data mentah) |
+| `getInviteInfo` | ref, pembina | Info pembina dari link undangan |
 | `getMyTickets` | userId | Tiket helpdesk saya |
 | `getAllTickets` | status | Semua tiket (admin) |
 
@@ -267,7 +274,7 @@ graph TD
 |:-------|:-----|:----------|
 | `submitMutabaah` | weekData, userId, pekan, tahun | Simpan mutabaah |
 | `resetWeek` | userId, tahun, pekan | Hapus data pekan |
-| `register` | email, nama, pembina | Registrasi anggota baru |
+| `register` | email, nama, password, role, gender, namaPembina / referralCode | Registrasi (via link undangan = langsung aktif) |
 | `createTicket` | subject, message, priority | Buat tiket helpdesk |
 | `addComment` | ticketId, message | Tambah komentar |
 | `updateTicketStatus` | ticketId, status | Update status tiket |
@@ -277,6 +284,16 @@ graph TD
 ---
 
 ## 📝 Changelog
+
+### v1.3.2 (24 Oktober 2026)
+
+- 🔗 Link undangan pembina diperbaiki. Link kini memakai ID grup (`/daftar?ref=...`), jadi tidak lagi gagal karena perbedaan ejaan nama. Link lama tetap jalan.
+- 📝 Halaman daftar terpisah di `/daftar`. Gender anggota mengikuti pembina yang mengundang. Pendaftaran dikunci di server agar tidak terbentuk akun ganda.
+- 🔢 Riwayat, detail anggota (pembina), dan rapor bulanan menampilkan jumlah asli ("32 dari 35 kali"), sholat per hari, dan tilawah dalam juz + halaman, bukan hanya persen.
+- 🐛 Riwayat tidak lagi menampilkan 0% karena salah membaca kolom persen dari server.
+- 🧹 File tak terpakai dihapus. Skill agent ditambahkan di `.agents/`.
+
+Detail: [PRD Addendum v1.3](PRD-Mutabaah-Yaumiyah-Addendum-v1.3.md) bagian D8 dan D9.
 
 ### v1.0 (4 Agustus 2026)
 

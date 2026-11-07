@@ -1,8 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import {
-  BookOpen, CheckCircle, TrendingUp, Users, Award,
-  ArrowRight, ChevronRight, ClipboardList, BarChart3,
-  LogIn, UserPlus, Smartphone, MousePointer, ShieldCheck
+  BookOpen, CheckCircle, TrendingUp, Users, Award, ArrowRight, ClipboardList, BarChart3, LogIn, UserPlus, MousePointer, ShieldCheck
 } from 'lucide-react'
 import './Landing.css'
 

@@ -1,15 +1,9 @@
 import { useState, useEffect } from 'react'
 import {
-  getAllUsers as apiGetAllUsers,
-  getAllGroups as apiGetAllGroups,
-  deleteUser as apiDeleteUser,
-  updateUserRole as apiUpdateUserRole,
-  isApiConfigured,
-  apiPost
+  getAllUsers as apiGetAllUsers, getAllGroups as apiGetAllGroups, deleteUser as apiDeleteUser, isApiConfigured, apiPost
 } from '../services/api'
 import {
-  Users, Search, Trash2, Shield, Loader2, AlertCircle,
-  CheckCircle, RefreshCw, X, Edit3, ChevronDown
+  Search, Trash2, Loader2, AlertCircle, CheckCircle, RefreshCw, X, Edit3, ChevronDown
 } from 'lucide-react'
 import './DashboardAdmin.css'
 

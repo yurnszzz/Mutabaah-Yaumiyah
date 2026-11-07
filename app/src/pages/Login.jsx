@@ -1,95 +1,136 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { getInviteInfo as apiGetInviteInfo, isApiConfigured } from '../services/api'
 import {
-  LogIn, Users, Shield, Star, Mail, ArrowRight,
-  Loader2, UserPlus, CheckCircle, Lock, User, Eye, EyeOff, ChevronDown, KeyRound,
-  Sprout, Award, Flame, AlertTriangle, ClipboardCheck, X
+  LogIn, Users, Shield, Star, Mail, ArrowRight, Loader2, UserPlus, CheckCircle, Lock, User, Eye, EyeOff,
+  ChevronDown, KeyRound, Sprout, Award, AlertTriangle, ClipboardCheck, X, Link2, LogOut
 } from 'lucide-react'
 import './Login.css'
 
 const roleIcons = { anggota: Users, pembina: Shield, yayasan: Star }
 const roleColors = { anggota: 'primary', pembina: 'secondary', yayasan: 'warning' }
 
-let gsiInitialized = false
-// Use a ref-style wrapper so GIS always calls the latest callback
-// without needing to re-initialize (which causes flickering)
-let latestGoogleCallback = null
+// Gelar prefixes people may type themselves; stripped before we add the right one
+const GELAR_RE = /^(ust\.?|ustadz|ustadzah|ustz\.?|ustzh\.?)\s+/i
 
-function GoogleSignInButton({ onSuccess, clientId, mode }) {
-  const btnRef = useRef(null)
-  const [gsiReady, setGsiReady] = useState(false)
+function stripGelar(name) {
+  return String(name || '').trim().replace(GELAR_RE, '').trim()
+}
 
-  // Always keep the latest callback accessible
+function gelarFor(gender) {
+  return gender === 'akhwat' ? 'Ustadzah' : 'Ust.'
+}
+
+/**
+ * Google button that we draw ourselves.
+ *
+ * Google's own rendered button decides its label: it shows "Sign in" or a
+ * personalised "Lanjutkan sebagai …" even on the Daftar page. Drawing the
+ * button ourselves and opening Google's OAuth popup keeps the label honest:
+ * "Masuk dengan Google" on /login, "Daftar dengan Google" on /daftar.
+ *
+ * onSuccess receives { email, name } from Google's userinfo endpoint.
+ */
+function GoogleButton({ onSuccess, clientId, mode, disabled }) {
+  const clientRef = useRef(null)
+  const onSuccessRef = useRef(onSuccess)
+  const [ready, setReady] = useState(!!window.google?.accounts?.oauth2)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+
+  useEffect(() => { onSuccessRef.current = onSuccess }, [onSuccess])
+
   useEffect(() => {
-    latestGoogleCallback = onSuccess
-  }, [onSuccess])
+    if (!clientId) return
 
-  useEffect(() => {
-    if (!clientId || !btnRef.current) return
-
-    function renderBtn() {
-      if (!window.google?.accounts?.id || !btnRef.current) return
-
-      if (!gsiInitialized) {
-        window.google.accounts.id.initialize({
-          client_id: clientId,
-          callback: (response) => {
-            // Always call the latest callback
-            if (latestGoogleCallback) latestGoogleCallback(response)
-          },
-          auto_select: false,
-        })
-        gsiInitialized = true
-      }
-
-      // Clear previous button
-      btnRef.current.innerHTML = ''
-
-      window.google.accounts.id.renderButton(btnRef.current, {
-        type: 'standard',
-        theme: 'outline',
-        size: 'large',
-        width: 360,
-        text: mode === 'signup' ? 'signup_with' : 'signin_with',
-        logo_alignment: 'center',
+    function init() {
+      if (!window.google?.accounts?.oauth2) return false
+      clientRef.current = window.google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: 'openid email profile',
+        prompt: 'select_account',
+        callback: async (resp) => {
+          if (resp?.error || !resp?.access_token) {
+            setBusy(false)
+            if (resp?.error !== 'access_denied') setErr('Google tidak memberi izin. Coba lagi.')
+            return
+          }
+          try {
+            const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+              headers: { Authorization: `Bearer ${resp.access_token}` },
+            })
+            const profile = await r.json()
+            if (!profile?.email) throw new Error('no email')
+            await onSuccessRef.current?.({ email: profile.email, name: profile.name || '' })
+          } catch {
+            setErr('Gagal membaca data akun Google. Periksa internet lalu coba lagi.')
+          } finally {
+            setBusy(false)
+          }
+        },
+        error_callback: (e) => {
+          setBusy(false)
+          // Closing the popup is a normal choice, not an error worth shouting about
+          if (e?.type !== 'popup_closed') {
+            setErr('Jendela Google tidak bisa dibuka. Izinkan pop-up di browser lalu coba lagi.')
+          }
+        },
       })
-      setGsiReady(true)
+      setReady(true)
+      return true
     }
 
-    if (window.google?.accounts?.id) {
-      renderBtn()
-    } else {
-      const interval = setInterval(() => {
-        if (window.google?.accounts?.id) {
-          renderBtn()
-          clearInterval(interval)
-        }
-      }, 200)
-      const timeout = setTimeout(() => clearInterval(interval), 10000)
-      return () => {
-        clearInterval(interval)
-        clearTimeout(timeout)
-      }
-    }
-  }, [clientId, mode]) // re-render when mode changes
+    if (init()) return
+    const interval = setInterval(() => { if (init()) clearInterval(interval) }, 200)
+    const timeout = setTimeout(() => clearInterval(interval), 10000)
+    return () => { clearInterval(interval); clearTimeout(timeout) }
+  }, [clientId])
 
   if (!clientId) return null
 
+  const label = mode === 'register' ? 'Daftar dengan Google' : 'Masuk dengan Google'
+
+  function handleClick() {
+    setErr('')
+    if (!clientRef.current) return
+    setBusy(true)
+    clientRef.current.requestAccessToken()
+  }
+
   return (
     <div className="google-signin-wrapper">
-      <div ref={btnRef} className="google-signin-btn" />
-      {!gsiReady && (
-        <div className="google-signin-placeholder">
-          <Loader2 size={16} className="login-form__spinner" />
-          <span>Memuat Google Sign-In...</span>
-        </div>
-      )}
+      <button
+        type="button"
+        id={mode === 'register' ? 'google-register-btn' : 'google-login-btn'}
+        className="google-btn"
+        onClick={handleClick}
+        disabled={!ready || busy || disabled}
+      >
+        {busy || !ready ? (
+          <Loader2 size={20} className="login-form__spinner" />
+        ) : (
+          <GoogleLogo />
+        )}
+        <span>{!ready ? 'Memuat Google…' : busy ? 'Menunggu Google…' : label}</span>
+      </button>
+      {err && <p className="google-btn__error" role="alert">{err}</p>}
     </div>
   )
 }
 
-function PasswordInput({ value, onChange, placeholder, disabled, id }) {
+function GoogleLogo() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.6-.4-3.9z" />
+      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
+      <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z" />
+      <path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9z" />
+    </svg>
+  )
+}
+
+function PasswordInput({ value, onChange, placeholder, disabled, id, label }) {
   const [show, setShow] = useState(false)
   return (
     <div className="login-form__input-wrapper">
@@ -99,11 +140,12 @@ function PasswordInput({ value, onChange, placeholder, disabled, id }) {
         type={show ? 'text' : 'password'}
         className="login-form__input login-form__input--password"
         placeholder={placeholder || 'Password'}
+        aria-label={label || placeholder || 'Password'}
         value={value}
         onChange={onChange}
         disabled={disabled}
         required
-        autoComplete={id === 'register-password' ? 'new-password' : 'current-password'}
+        autoComplete={id === 'login-password' ? 'current-password' : 'new-password'}
       />
       <button
         type="button"
@@ -118,74 +160,128 @@ function PasswordInput({ value, onChange, placeholder, disabled, id }) {
   )
 }
 
-export default function Login() {
+/**
+ * Halaman Masuk (/login) dan Daftar (/daftar).
+ * mode: 'login' | 'register'
+ */
+export default function Login({ mode = 'login' }) {
   const {
+    user, logout,
     loginWithPassword, registerWithPassword, handleGoogleLogin,
     forgotPassword, loginDemo, demoUsers,
     isLoading, error, successMessage, clearMessages,
     isApiMode, hasGoogleAuth, googleClientId
   } = useAuth()
 
+  const navigate = useNavigate()
+  const location = useLocation()
   const [searchParams] = useSearchParams()
+  const isRegister = mode === 'register'
 
-  const [tab, setTab] = useState('login') // 'login' | 'register' | 'forgot'
+  // Remember whether someone was already signed in when this page opened.
+  // Used to tell "opened an invite link while logged in" apart from
+  // "just finished registering and got logged in".
+  const [hadSessionOnOpen] = useState(() => !!user)
+
+  const [forgotView, setForgotView] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [nama, setNama] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [role, setRole] = useState('anggota')
-  const [tingkatan, setTingkatan] = useState('muda') // 'muda' | 'pratama'
-  const [gender, setGender] = useState('ikhwan') // 'ikhwan' | 'akhwat'
+  const [tingkatan, setTingkatan] = useState('muda')
+  const [gender, setGender] = useState('ikhwan')
   const [namaPembina, setNamaPembina] = useState('')
   const [localError, setLocalError] = useState('')
-  const [googleEmail, setGoogleEmail] = useState('') // for Google auto-fill
-  const [googleAutoRegister, setGoogleAutoRegister] = useState(false) // auto-redirect from sign-in
-  const [showConfirm, setShowConfirm] = useState(false) // registration confirmation modal
-  const [confirmData, setConfirmData] = useState(null) // data to confirm before registering
-  const [referralCode, setReferralCode] = useState('') // referral code from pembina link
+  const [googleEmail, setGoogleEmail] = useState('')
+  const [googleNotice, setGoogleNotice] = useState('')
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [confirmData, setConfirmData] = useState(null)
 
-  // Ref to always have current tab value in Google callback (avoids stale closure)
-  const tabRef = useRef(tab)
-  tabRef.current = tab
+  // Invite link state: idle | loading | ok | invalid
+  const refParam = searchParams.get('ref') || ''
+  const pembinaParam = searchParams.get('pembina') || ''
+  const hasInviteLink = isRegister && !!(refParam || pembinaParam)
+  const [invite, setInvite] = useState({ status: hasInviteLink ? 'loading' : 'idle' })
+  const inviteActive = invite.status === 'ok'
 
-  // Check URL params for share link (?pembina=NamaPembina&ref=grp_xxx)
+  // Clear stale messages from the other page
   useEffect(() => {
-    const pembina = searchParams.get('pembina')
-    const refCode = searchParams.get('ref')
-    if (refCode) {
-      setReferralCode(refCode)
-    }
-    if (pembina) {
-      setTab('register')
-      setRole('anggota')
-      // Strip gelar prefix if present — gelar is auto-derived from gender in handleRegister
-      const parts = pembina.trim()
-      if (parts.startsWith('Ust. ') || parts.startsWith('Ust.')) {
-        setNamaPembina(parts.replace(/^Ust\.\s*/, ''))
-        setGender('ikhwan') // Ust. = grup ikhwan
-      } else if (parts.startsWith('Ustadzah ')) {
-        setNamaPembina(parts.replace(/^Ustadzah\s*/, ''))
-        setGender('akhwat') // Ustadzah = grup akhwat
-      } else {
-        setNamaPembina(parts)
-      }
-    }
-  }, [searchParams])
-
-  function switchTab(newTab) {
-    setTab(newTab)
-    if (newTab !== 'register') {
-      setEmail(googleEmail || '')
-      setNama('')
-    }
-    setPassword('')
-    setConfirmPassword('')
-    if (!searchParams.get('pembina')) {
-      setRole('anggota')
-      setNamaPembina('')
-    }
-    setLocalError('')
     clearMessages()
+    setLocalError('')
+  }, [mode, clearMessages])
+
+  // Arriving from the Masuk page after Google said "belum terdaftar"
+  useEffect(() => {
+    const st = location.state
+    if (isRegister && st?.googleEmail) {
+      setEmail(st.googleEmail)
+      setGoogleEmail(st.googleEmail)
+      setNama(st.googleName || '')
+      setGoogleNotice(st.googleEmail)
+    }
+  }, [isRegister, location.state])
+
+  // Resolve the invite link → pembina, group and gender
+  useEffect(() => {
+    if (!hasInviteLink) return
+    let cancelled = false
+
+    function legacyFallback() {
+      // Older backend without getInviteInfo: read what the link carries
+      const raw = pembinaParam.trim()
+      const derivedGender = /^ustadzah\b|^ustz/i.test(raw) ? 'akhwat' : 'ikhwan'
+      if (!raw && !refParam) {
+        setInvite({ status: 'invalid', message: 'Link undangan tidak lengkap.' })
+        return
+      }
+      setInvite({
+        status: 'ok',
+        grupId: refParam,
+        grupNama: raw,
+        pembinaNama: raw || 'pembina Anda',
+        gender: derivedGender,
+      })
+      setGender(derivedGender)
+      setRole('anggota')
+    }
+
+    if (!isApiConfigured()) {
+      legacyFallback()
+      return
+    }
+
+    setInvite({ status: 'loading' })
+    apiGetInviteInfo(refParam, pembinaParam)
+      .then(res => {
+        if (cancelled) return
+        if (res?.invite) {
+          setInvite({ status: 'ok', ...res.invite })
+          setGender(res.invite.gender === 'akhwat' ? 'akhwat' : 'ikhwan')
+          setRole('anggota')
+        } else {
+          legacyFallback()
+        }
+      })
+      .catch(err => {
+        if (cancelled) return
+        if (/action tidak dikenal/i.test(err.message || '')) {
+          legacyFallback()
+        } else {
+          setInvite({ status: 'invalid', message: err.message || 'Link undangan tidak dikenali.' })
+          if (pembinaParam) setNamaPembina(stripGelar(pembinaParam))
+        }
+      })
+    return () => { cancelled = true }
+  }, [hasInviteLink, refParam, pembinaParam])
+
+  // ===== Redirect rules =====
+  // Signed in before opening this page:
+  //  - plain /login or /daftar → go home
+  //  - invite link → explain and offer to sign out (handled in render)
+  // Signed in during this visit (login or registration finished) → go home
+  if (user && (!hadSessionOnOpen || !hasInviteLink)) {
+    return <Navigate to="/" replace />
   }
 
   function handleLogin(e) {
@@ -198,52 +294,52 @@ export default function Login() {
   function handleRegister(e) {
     e.preventDefault()
     setLocalError('')
-
     if (!nama.trim() || !email.trim() || !password) return
 
-    // Auto-derive gelar from gender
-    const gelar = gender === 'akhwat' ? 'Ustadzah' : 'Ust.'
-
-    // Build full pembina name with auto-gelar (for anggota referencing their pembina)
-    let fullPembinaName = ''
-    if (role === 'anggota') {
-      if (!namaPembina.trim()) {
-        setLocalError('Nama pembina wajib diisi')
-        return
-      }
-      fullPembinaName = gelar + ' ' + namaPembina.trim()
-    }
-
-    // For pembina: auto-prepend gelar to their own name
-    let finalNama = nama.trim()
-    if (role === 'pembina') {
-      finalNama = gelar + ' ' + finalNama
-    }
-
     if (password.length < 6) {
-      setLocalError('Password minimal 6 karakter')
+      setLocalError('Password minimal 6 karakter.')
       return
     }
     if (password !== confirmPassword) {
-      setLocalError('Konfirmasi password tidak sama')
+      setLocalError('Konfirmasi password belum sama. Ketik ulang password yang sama.')
       return
     }
 
-    // Pembina always uses 'pratama' target
-    const finalTingkatan = role === 'pembina' ? 'pratama' : tingkatan
+    const finalRole = inviteActive ? 'anggota' : role
+    const finalGender = inviteActive ? invite.gender : gender
 
-    // Show confirmation modal instead of submitting directly
+    let fullPembinaName = null
+    if (finalRole === 'anggota') {
+      if (inviteActive) {
+        fullPembinaName = invite.pembinaNama
+      } else {
+        const core = stripGelar(namaPembina)
+        if (!core) {
+          setLocalError('Nama pembina wajib diisi.')
+          return
+        }
+        fullPembinaName = gelarFor(finalGender) + ' ' + core
+      }
+    }
+
+    // Pembina: their own name carries the gelar
+    const finalNama = finalRole === 'pembina'
+      ? gelarFor(finalGender) + ' ' + stripGelar(nama)
+      : nama.trim()
+
+    const finalTingkatan = finalRole === 'pembina' ? 'pratama' : tingkatan
+
     setConfirmData({
       finalNama,
       email: email.trim(),
       password,
-      role,
+      role: finalRole,
       finalTingkatan,
-      fullPembinaName: role === 'anggota' ? fullPembinaName : null,
-      gender,
-      // Display-friendly values for modal
-      displayGender: gender === 'ikhwan' ? 'Ikhwan' : 'Akhwat',
-      displayRole: role === 'anggota' ? 'Anggota' : role === 'pembina' ? 'Pembina' : 'Yayasan',
+      fullPembinaName,
+      gender: finalGender,
+      referralCode: inviteActive ? (invite.grupId || refParam) : '',
+      displayGender: finalGender === 'akhwat' ? 'Akhwat' : 'Ikhwan',
+      displayRole: finalRole === 'pembina' ? 'Pembina' : 'Anggota',
       displayTingkatan: finalTingkatan === 'muda' ? 'Muda' : 'Pratama',
     })
     setShowConfirm(true)
@@ -260,13 +356,8 @@ export default function Login() {
       confirmData.finalTingkatan,
       confirmData.fullPembinaName,
       confirmData.gender,
-      referralCode
+      confirmData.referralCode
     )
-    setConfirmData(null)
-  }
-
-  function handleCancelConfirm() {
-    setShowConfirm(false)
     setConfirmData(null)
   }
 
@@ -277,50 +368,75 @@ export default function Login() {
     forgotPassword(email.trim())
   }
 
-  // Decode Google JWT locally (same logic as AuthContext)
-  function decodeGoogleJwt(token) {
-    try {
-      const payload = token.split('.')[1]
-      const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'))
-      return JSON.parse(decoded)
-    } catch {
-      return null
+  // Masuk: log in; if the Google account has no profile yet, move to Daftar
+  async function onGoogleLogin(profile) {
+    setLocalError('')
+    const result = await handleGoogleLogin(profile)
+    if (result?.unregistered) {
+      navigate('/daftar', {
+        state: { googleEmail: result.email, googleName: result.nama },
+      })
     }
   }
 
-  // Google OAuth callback — unified for both login & register tabs
-  // If user not found: auto-redirect to register with pre-filled data (no error)
-  async function onGoogleSuccess(credentialResponse) {
-    const currentTab = tabRef.current
-    const payload = decodeGoogleJwt(credentialResponse.credential)
-    if (!payload || !payload.email) {
-      setLocalError('Gagal membaca data dari Google')
+  // Daftar: if the account already exists, just log in; otherwise pre-fill
+  async function onGoogleRegister(profile) {
+    setLocalError('')
+    if (!profile?.email) {
+      setLocalError('Gagal membaca data dari Google. Coba lagi atau isi formulir secara manual.')
       return
     }
-
-    if (currentTab === 'register') {
-      // REGISTER MODE: Pre-fill form directly
-      setEmail(payload.email)
-      setGoogleEmail(payload.email)
-      setNama(payload.name || payload.email.split('@')[0])
-      setLocalError('')
+    const result = await handleGoogleLogin(profile)
+    if (result?.unregistered) {
+      setEmail(result.email)
+      setGoogleEmail(result.email)
+      setNama(prev => prev || result.nama || profile.name || '')
+      setGoogleNotice(result.email)
       clearMessages()
-    } else {
-      // LOGIN MODE: Try login, auto-redirect to register if not found
-      const result = await handleGoogleLogin(credentialResponse)
-      if (result && result.unregistered) {
-        // Smooth redirect — no error, show guidance
-        setTab('register')
-        setEmail(result.email)
-        setGoogleEmail(result.email)
-        setNama(result.nama || payload.name || '')
-        setLocalError('')
-        clearMessages()
-        // Set a temporary success-like message to guide user
-        setGoogleAutoRegister(true)
-      }
     }
   }
+
+  function switchToForgot(on) {
+    setForgotView(on)
+    setPassword('')
+    setLocalError('')
+    clearMessages()
+  }
+
+  const registerDisabled = isLoading || invite.status === 'loading' ||
+    !nama.trim() || !email.trim() || !password || !confirmPassword ||
+    (!inviteActive && role === 'anggota' && !namaPembina.trim())
+
+  // ===== Signed-in user opened an invite link =====
+  if (user && hadSessionOnOpen && hasInviteLink) {
+    return (
+      <div className="login-page">
+        <div className="login-card">
+          <div className="login-header">
+            <img src="/SIT_MATAHARI_LOGO.png" alt="Logo SIT Matahari" className="login-logo" />
+            <h1 className="login-title">Link Pendaftaran Anggota</h1>
+          </div>
+          <div className="login-session">
+            <p className="login-session__title">Anda sedang masuk sebagai {user.nama}</p>
+            <p className="login-session__desc">
+              Link ini untuk mendaftarkan akun anggota baru. Jika ingin mendaftarkan akun lain di HP ini,
+              keluar dulu dari akun Anda.
+            </p>
+            <div className="login-session__actions">
+              <button type="button" className="login-form__submit" onClick={logout}>
+                <LogOut size={18} /> Keluar lalu daftar
+              </button>
+              <button type="button" className="login-form__back" onClick={() => navigate('/', { replace: true })}>
+                Kembali ke beranda
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const pageTitle = forgotView ? 'Lupa Password' : isRegister ? 'Daftar Akun Baru' : 'Masuk'
 
   return (
     <div className="login-page">
@@ -329,60 +445,102 @@ export default function Login() {
           <img src="/SIT_MATAHARI_LOGO.png" alt="Logo SIT Matahari" className="login-logo" />
           <h1 className="login-title">Mutabaah Yaumiyah</h1>
           <p className="login-subtitle">Sekolah Islam Terpadu Matahari</p>
-          <p className="login-desc">Evaluasi Pekanan Amalan</p>
         </div>
 
         {isApiMode ? (
           <>
-            {/* === Google Sign-In / Sign-Up === */}
-            {hasGoogleAuth && tab !== 'forgot' && (
+            {/* === Page switcher: two real pages, not tabs on one page === */}
+            {!forgotView && (
+              <nav className="login-tabs" aria-label="Pilih halaman">
+                <Link
+                  to="/login"
+                  className={`login-tabs__btn ${!isRegister ? 'login-tabs__btn--active' : ''}`}
+                  aria-current={!isRegister ? 'page' : undefined}
+                >
+                  <LogIn size={16} />
+                  Masuk
+                </Link>
+                <Link
+                  to={`/daftar${location.search}`}
+                  className={`login-tabs__btn ${isRegister ? 'login-tabs__btn--active' : ''}`}
+                  aria-current={isRegister ? 'page' : undefined}
+                >
+                  <UserPlus size={16} />
+                  Daftar
+                </Link>
+              </nav>
+            )}
+
+            <h2 className="login-page-title">{pageTitle}</h2>
+
+            {/* === Invite card (sign-up via pembina link) === */}
+            {isRegister && invite.status === 'loading' && (
+              <div className="login-invite login-invite--loading" role="status">
+                <Loader2 size={18} className="login-form__spinner" />
+                <span>Memeriksa link undangan...</span>
+              </div>
+            )}
+            {isRegister && inviteActive && (
+              <div className="login-invite" role="status">
+                <Link2 size={20} className="login-invite__icon" />
+                <div>
+                  <p className="login-invite__title">Undangan dari {invite.pembinaNama}</p>
+                  <p className="login-invite__desc">
+                    Setelah mendaftar, Anda langsung masuk grup ini sebagai anggota {invite.gender === 'akhwat' ? 'akhwat' : 'ikhwan'}.
+                    Tidak perlu menunggu persetujuan.
+                  </p>
+                </div>
+              </div>
+            )}
+            {isRegister && invite.status === 'invalid' && (
+              <div className="login-invite login-invite--invalid" role="alert">
+                <AlertTriangle size={20} className="login-invite__icon" />
+                <div>
+                  <p className="login-invite__title">Link undangan tidak dikenali</p>
+                  <p className="login-invite__desc">
+                    {invite.message} Anda tetap bisa mendaftar dengan mengetik nama pembina,
+                    tetapi akun harus disetujui pembina dulu.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* === Google === */}
+            {hasGoogleAuth && !forgotView && (
               <>
-                <GoogleSignInButton
+                <p className="login-google-label">
+                  {isRegister
+                    ? 'Punya akun Google? Daftar lebih cepat, nama dan email terisi otomatis.'
+                    : 'Sudah pernah daftar dengan Google? Masuk di sini.'}
+                </p>
+                <GoogleButton
+                  key={mode}
                   clientId={googleClientId}
-                  onSuccess={onGoogleSuccess}
-                  mode={tab === 'register' ? 'signup' : 'signin'}
+                  onSuccess={isRegister ? onGoogleRegister : onGoogleLogin}
+                  mode={mode}
+                  disabled={isLoading}
                 />
                 <div className="login-or">
                   <span className="login-or__line" />
                   <span className="login-or__text">
-                    {tab === 'login' ? 'atau masuk dengan email' : 'atau daftar dengan email'}
+                    {isRegister ? 'atau isi formulir di bawah' : 'atau masuk dengan email'}
                   </span>
                   <span className="login-or__line" />
                 </div>
               </>
             )}
 
-            {/* === Tab Switcher === */}
-            {tab !== 'forgot' && (
-              <div className="login-tabs">
-                <button
-                  type="button"
-                  className={`login-tabs__btn ${tab === 'login' ? 'login-tabs__btn--active' : ''}`}
-                  onClick={() => switchTab('login')}
-                >
-                  <LogIn size={16} />
-                  Masuk
-                </button>
-                <button
-                  type="button"
-                  className={`login-tabs__btn ${tab === 'register' ? 'login-tabs__btn--active' : ''}`}
-                  onClick={() => switchTab('register')}
-                >
-                  <UserPlus size={16} />
-                  Daftar
-                </button>
-              </div>
-            )}
-
             {/* === Login Form === */}
-            {tab === 'login' && (
+            {!isRegister && !forgotView && (
               <form onSubmit={handleLogin} className="login-form">
                 <div className="login-form__input-wrapper">
                   <Mail size={18} className="login-form__icon" />
                   <input
+                    id="login-email"
                     type="email"
                     className="login-form__input"
                     placeholder="Email"
+                    aria-label="Email"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     disabled={isLoading}
@@ -398,53 +556,49 @@ export default function Login() {
                   disabled={isLoading}
                 />
                 <button
+                  id="login-submit"
                   type="submit"
                   className="login-form__submit"
                   disabled={isLoading || !email.trim() || !password}
                 >
                   {isLoading ? (
-                    <>
-                      <Loader2 size={18} className="login-form__spinner" />
-                      Memverifikasi...
-                    </>
+                    <><Loader2 size={18} className="login-form__spinner" /> Memeriksa...</>
                   ) : (
-                    <>
-                      <LogIn size={18} />
-                      Masuk
-                    </>
+                    <><LogIn size={18} /> Masuk</>
                   )}
                 </button>
-                <button
-                  type="button"
-                  className="login-form__forgot"
-                  onClick={() => switchTab('forgot')}
-                >
+                <button type="button" className="login-form__forgot" onClick={() => switchToForgot(true)}>
                   Lupa password?
                 </button>
+                <p className="login-switch">
+                  Belum punya akun? <Link to="/daftar">Daftar di sini</Link>
+                </p>
               </form>
             )}
 
             {/* === Register Form === */}
-            {tab === 'register' && (
+            {isRegister && (
               <form onSubmit={handleRegister} className="login-form">
-                {/* Auto-redirect guidance */}
-                {googleAutoRegister && googleEmail && (
+                {googleNotice && (
                   <div className="login-form__guidance">
                     <CheckCircle size={16} />
                     <div>
-                      <p className="login-form__guidance-title">Akun belum terdaftar</p>
+                      <p className="login-form__guidance-title">Data Google sudah terisi</p>
                       <p className="login-form__guidance-desc">
-                        Email <strong>{googleEmail}</strong> belum terdaftar. Lengkapi data di bawah untuk membuat akun baru.
+                        Email <strong>{googleNotice}</strong> belum terdaftar. Lengkapi sisa data di bawah, lalu tekan Daftar.
                       </p>
                     </div>
                   </div>
                 )}
+
                 <div className="login-form__input-wrapper">
                   <User size={18} className="login-form__icon" />
                   <input
+                    id="register-nama"
                     type="text"
                     className="login-form__input"
-                    placeholder="Nama lengkap"
+                    placeholder="Nama lengkap (tanpa gelar)"
+                    aria-label="Nama lengkap"
                     value={nama}
                     onChange={e => setNama(e.target.value)}
                     disabled={isLoading}
@@ -455,9 +609,11 @@ export default function Login() {
                 <div className="login-form__input-wrapper">
                   <Mail size={18} className="login-form__icon" />
                   <input
+                    id="register-email"
                     type="email"
                     className="login-form__input"
                     placeholder="Email"
+                    aria-label="Email"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     disabled={isLoading || !!googleEmail}
@@ -466,54 +622,68 @@ export default function Login() {
                   />
                 </div>
 
-                {/* Gender selector */}
+                {/* Gender: locked when the invite decides it */}
                 <div className="login-form__gender">
-                  <label className="login-form__gender-label">Jenis Kelamin:</label>
-                  <div className="login-form__gender-options">
-                    <button
-                      type="button"
-                      className={`login-form__gender-btn ${gender === 'ikhwan' ? 'login-form__gender-btn--active' : ''}`}
-                      onClick={() => setGender('ikhwan')}
+                  <span className="login-form__gender-label" id="gender-label">Jenis kelamin:</span>
+                  {inviteActive ? (
+                    <p className="login-form__locked">
+                      {invite.gender === 'akhwat' ? 'Akhwat' : 'Ikhwan'}
+                      <span> · mengikuti grup pembina</span>
+                    </p>
+                  ) : (
+                    <div className="login-form__gender-options" role="group" aria-labelledby="gender-label">
+                      <button
+                        type="button"
+                        className={`login-form__gender-btn ${gender === 'ikhwan' ? 'login-form__gender-btn--active' : ''}`}
+                        onClick={() => setGender('ikhwan')}
+                        disabled={isLoading}
+                        aria-pressed={gender === 'ikhwan'}
+                      >
+                        <Users size={14} /> Ikhwan
+                      </button>
+                      <button
+                        type="button"
+                        className={`login-form__gender-btn ${gender === 'akhwat' ? 'login-form__gender-btn--active login-form__gender-btn--akhwat' : ''}`}
+                        onClick={() => setGender('akhwat')}
+                        disabled={isLoading}
+                        aria-pressed={gender === 'akhwat'}
+                      >
+                        <User size={14} /> Akhwat
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Role: invite links are always for anggota */}
+                {!inviteActive && (
+                  <div className="login-form__select-wrapper">
+                    <Shield size={18} className="login-form__icon" />
+                    <select
+                      id="register-role"
+                      className="login-form__select"
+                      aria-label="Daftar sebagai"
+                      value={role}
+                      onChange={e => setRole(e.target.value)}
                       disabled={isLoading}
                     >
-                      <Users size={14} /> Ikhwan
-                    </button>
-                    <button
-                      type="button"
-                      className={`login-form__gender-btn ${gender === 'akhwat' ? 'login-form__gender-btn--active login-form__gender-btn--akhwat' : ''}`}
-                      onClick={() => setGender('akhwat')}
-                      disabled={isLoading}
-                    >
-                      <User size={14} /> Akhwat
-                    </button>
+                      <option value="anggota">Daftar sebagai: Anggota</option>
+                      <option value="pembina">Daftar sebagai: Pembina</option>
+                    </select>
+                    <ChevronDown size={16} className="login-form__chevron" />
                   </div>
-                </div>
+                )}
 
-                {/* Role dropdown */}
-                <div className="login-form__select-wrapper">
-                  <Shield size={18} className="login-form__icon" />
-                  <select
-                    className="login-form__select"
-                    value={role}
-                    onChange={e => setRole(e.target.value)}
-                    disabled={isLoading}
-                  >
-                    <option value="anggota">Daftar sebagai: Anggota</option>
-                    <option value="pembina">Daftar sebagai: Pembina</option>
-                  </select>
-                  <ChevronDown size={16} className="login-form__chevron" />
-                </div>
-
-                {/* Tingkatan selector (anggota only) */}
-                {role === 'anggota' && (
+                {/* Jenjang (anggota only) */}
+                {(inviteActive || role === 'anggota') && (
                   <div className="login-form__gender">
-                    <label className="login-form__gender-label">Jenjang Anggota:</label>
-                    <div className="login-form__gender-options">
+                    <span className="login-form__gender-label" id="jenjang-label">Jenjang anggota:</span>
+                    <div className="login-form__gender-options" role="group" aria-labelledby="jenjang-label">
                       <button
                         type="button"
                         className={`login-form__gender-btn ${tingkatan === 'muda' ? 'login-form__gender-btn--active' : ''}`}
                         onClick={() => setTingkatan('muda')}
                         disabled={isLoading}
+                        aria-pressed={tingkatan === 'muda'}
                       >
                         <Sprout size={14} /> Muda
                       </button>
@@ -522,6 +692,7 @@ export default function Login() {
                         className={`login-form__gender-btn ${tingkatan === 'pratama' ? 'login-form__gender-btn--active' : ''}`}
                         onClick={() => setTingkatan('pratama')}
                         disabled={isLoading}
+                        aria-pressed={tingkatan === 'pratama'}
                       >
                         <Award size={14} /> Pratama
                       </button>
@@ -529,73 +700,56 @@ export default function Login() {
                   </div>
                 )}
 
-
-
-
-
-                {/* Nama Pembina (required for anggota) */}
-                {role === 'anggota' && (
-                  <>
-                    <div className="login-form__input-wrapper">
-                      <Shield size={18} className="login-form__icon" />
-                      <input
-                        type="text"
-                        className="login-form__input"
-                        placeholder="Nama pembina (tanpa gelar)"
-                        value={namaPembina}
-                        onChange={e => setNamaPembina(e.target.value)}
-                        disabled={isLoading || !!searchParams.get('pembina')}
-                        required
-                      />
-                    </div>
-                    <p className="login-form__hint">
-                      Masukkan nama pembina Anda. Gelar ({gender === 'akhwat' ? 'Ustadzah' : 'Ust.'}) akan otomatis ditambahkan. Anggota dengan pembina yang sama akan masuk ke grup yang sama.
-                    </p>
-                  </>
+                {/* Nama pembina: only when there is no valid invite */}
+                {!inviteActive && role === 'anggota' && invite.status !== 'loading' && (
+                  <div className="login-form__input-wrapper">
+                    <Shield size={18} className="login-form__icon" />
+                    <input
+                      id="register-pembina"
+                      type="text"
+                      className="login-form__input"
+                      placeholder="Nama pembina Anda"
+                      aria-label="Nama pembina"
+                      value={namaPembina}
+                      onChange={e => setNamaPembina(e.target.value)}
+                      disabled={isLoading}
+                      required
+                    />
+                  </div>
                 )}
-
-
 
                 <PasswordInput
                   id="register-password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="Password (min. 6 karakter)"
+                  placeholder="Password (minimal 6 karakter)"
                   disabled={isLoading}
                 />
                 <PasswordInput
                   id="register-confirm"
                   value={confirmPassword}
                   onChange={e => setConfirmPassword(e.target.value)}
-                  placeholder="Konfirmasi password"
+                  placeholder="Ketik ulang password"
                   disabled={isLoading}
                 />
-                <button
-                  type="submit"
-                  className="login-form__submit"
-                  disabled={isLoading || !nama.trim() || !email.trim() || !password || !confirmPassword || (role === 'anggota' && !namaPembina.trim())}
-                >
+                <button id="register-submit" type="submit" className="login-form__submit" disabled={registerDisabled}>
                   {isLoading ? (
-                    <>
-                      <Loader2 size={18} className="login-form__spinner" />
-                      Mendaftar...
-                    </>
+                    <><Loader2 size={18} className="login-form__spinner" /> Mendaftarkan...</>
                   ) : (
-                    <>
-                      <UserPlus size={18} />
-                      Daftar
-                    </>
+                    <><UserPlus size={18} /> Daftar</>
                   )}
                 </button>
+                <p className="login-switch">
+                  Sudah punya akun? <Link to="/login">Masuk di sini</Link>
+                </p>
               </form>
             )}
 
-            {/* === Forgot Password Form === */}
-            {tab === 'forgot' && (
+            {/* === Forgot Password === */}
+            {!isRegister && forgotView && (
               <form onSubmit={handleForgotPassword} className="login-form">
                 <div className="login-form__forgot-header">
                   <KeyRound size={32} className="login-form__forgot-icon" />
-                  <h2 className="login-form__forgot-title">Lupa Password</h2>
                   <p className="login-form__forgot-desc">
                     Masukkan email Anda. Password sementara akan dikirim ke email tersebut.
                   </p>
@@ -603,9 +757,11 @@ export default function Login() {
                 <div className="login-form__input-wrapper">
                   <Mail size={18} className="login-form__icon" />
                   <input
+                    id="forgot-email"
                     type="email"
                     className="login-form__input"
                     placeholder="Email terdaftar"
+                    aria-label="Email terdaftar"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     disabled={isLoading}
@@ -613,28 +769,14 @@ export default function Login() {
                     autoComplete="email"
                   />
                 </div>
-                <button
-                  type="submit"
-                  className="login-form__submit"
-                  disabled={isLoading || !email.trim()}
-                >
+                <button type="submit" className="login-form__submit" disabled={isLoading || !email.trim()}>
                   {isLoading ? (
-                    <>
-                      <Loader2 size={18} className="login-form__spinner" />
-                      Mengirim...
-                    </>
+                    <><Loader2 size={18} className="login-form__spinner" /> Mengirim...</>
                   ) : (
-                    <>
-                      <Mail size={18} />
-                      Kirim Password Sementara
-                    </>
+                    <><Mail size={18} /> Kirim Password Sementara</>
                   )}
                 </button>
-                <button
-                  type="button"
-                  className="login-form__back"
-                  onClick={() => switchTab('login')}
-                >
+                <button type="button" className="login-form__back" onClick={() => switchToForgot(false)}>
                   Kembali ke halaman masuk
                 </button>
               </form>
@@ -678,17 +820,15 @@ export default function Login() {
           </>
         )}
 
-        {/* Success Message */}
         {successMessage && (
-          <div className="login-success">
+          <div className="login-success" role="status">
             <CheckCircle size={16} />
             {successMessage}
           </div>
         )}
 
-        {/* Error Messages */}
         {(error || localError) && (
-          <p className="login-error">{localError || error}</p>
+          <p className="login-error" role="alert">{localError || error}</p>
         )}
 
         <div className="login-footer">
@@ -701,15 +841,15 @@ export default function Login() {
 
       {/* Registration Confirmation Modal */}
       {showConfirm && confirmData && (
-        <div className="confirm-overlay" onClick={handleCancelConfirm}>
-          <div className="confirm-modal" onClick={e => e.stopPropagation()}>
-            <button className="confirm-modal__close" onClick={handleCancelConfirm} type="button">
+        <div className="confirm-overlay" onClick={() => setShowConfirm(false)}>
+          <div className="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-title" onClick={e => e.stopPropagation()}>
+            <button className="confirm-modal__close" onClick={() => setShowConfirm(false)} type="button" aria-label="Tutup">
               <X size={18} />
             </button>
             <div className="confirm-modal__icon">
               <ClipboardCheck size={32} />
             </div>
-            <h3 className="confirm-modal__title">Konfirmasi Data Pendaftaran</h3>
+            <h3 className="confirm-modal__title" id="confirm-title">Periksa Data Anda</h3>
             <p className="confirm-modal__desc">Pastikan semua data sudah benar sebelum mendaftar.</p>
 
             <div className="confirm-modal__data">
@@ -722,11 +862,11 @@ export default function Login() {
                 <span className="confirm-modal__value">{confirmData.email}</span>
               </div>
               <div className="confirm-modal__row">
-                <span className="confirm-modal__label">Gender</span>
+                <span className="confirm-modal__label">Jenis kelamin</span>
                 <span className="confirm-modal__value">{confirmData.displayGender}</span>
               </div>
               <div className="confirm-modal__row">
-                <span className="confirm-modal__label">Role</span>
+                <span className="confirm-modal__label">Daftar sebagai</span>
                 <span className="confirm-modal__value">{confirmData.displayRole}</span>
               </div>
               {confirmData.role !== 'pembina' && (
@@ -741,16 +881,24 @@ export default function Login() {
                   <span className="confirm-modal__value">{confirmData.fullPembinaName}</span>
                 </div>
               )}
+              {confirmData.role === 'anggota' && (
+                <div className="confirm-modal__row">
+                  <span className="confirm-modal__label">Status akun</span>
+                  <span className="confirm-modal__value">
+                    {confirmData.referralCode ? 'Langsung aktif' : 'Menunggu persetujuan pembina'}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="confirm-modal__warning">
               <AlertTriangle size={14} />
-              <span>Data jenjang dan role tidak bisa diubah sendiri setelah mendaftar. Hubungi admin jika ada kesalahan.</span>
+              <span>Jenjang dan peran tidak bisa diubah sendiri setelah mendaftar. Hubungi admin jika ada kesalahan.</span>
             </div>
 
             <div className="confirm-modal__actions">
-              <button type="button" className="confirm-modal__btn confirm-modal__btn--ghost" onClick={handleCancelConfirm}>
-                Kembali
+              <button type="button" className="confirm-modal__btn confirm-modal__btn--ghost" onClick={() => setShowConfirm(false)}>
+                Perbaiki
               </button>
               <button type="button" className="confirm-modal__btn confirm-modal__btn--primary" onClick={handleConfirmRegister}>
                 <UserPlus size={16} />

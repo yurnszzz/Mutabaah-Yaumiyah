@@ -7,8 +7,7 @@ import {
   isApiConfigured
 } from '../services/api'
 import {
-  Users, LayoutGrid, BarChart3, ChevronRight, Loader2,
-  TrendingUp, UserCheck, UserX, Activity, Shield, Percent
+  Users, LayoutGrid, BarChart3, ChevronRight, Loader2, UserCheck, Activity, Shield
 } from 'lucide-react'
 import './DashboardAdmin.css'
 
@@ -158,7 +157,6 @@ export default function DashboardYayasan() {
               {groups.length > 0 ? (
                 <div className="admin-grup-rekap">
                   {groups.map(g => {
-                    const pct = g.totalAnggota > 0 ? Math.round((g.sudahIsi / g.totalAnggota) * 100) : 0
                     return (
                       <div key={g.grup_id} className="admin-grup-rekap__item">
                         <div className="admin-grup-rekap__header">

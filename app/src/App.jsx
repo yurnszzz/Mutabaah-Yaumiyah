@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { MutabaahProvider } from './context/MutabaahContext'
 import Layout from './components/Layout'
@@ -33,6 +33,23 @@ function PublicRoute({ children }) {
   return children
 }
 
+/**
+ * /login. Older invite links pointed here (/login?pembina=..&ref=..);
+ * send those to the sign-up page so they keep working.
+ */
+function LoginRoute() {
+  const location = useLocation()
+  const params = new URLSearchParams(location.search)
+  if (params.get('ref') || params.get('pembina')) {
+    return <Navigate to={`/daftar${location.search}`} replace />
+  }
+  return (
+    <PublicRoute>
+      <Login key="login" mode="login" />
+    </PublicRoute>
+  )
+}
+
 /** Route dashboard based on role */
 function RoleDashboard() {
   const { user } = useAuth()
@@ -54,14 +71,9 @@ function AppRoutes() {
           </PublicRoute>
         }
       />
-      <Route
-        path="/login"
-        element={
-          <PublicRoute>
-            <Login />
-          </PublicRoute>
-        }
-      />
+      <Route path="/login" element={<LoginRoute />} />
+      {/* Login handles the signed-in case itself (invite link opened while logged in) */}
+      <Route path="/daftar" element={<Login key="register" mode="register" />} />
       <Route
         element={
           <ProtectedRoute>

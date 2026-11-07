@@ -174,19 +174,93 @@ function findGroupByPembinaName(pembinaName) {
 }
 
 /**
- * Self-registration (Google OAuth or manual with password)
- * - Pembina: auto-creates a group named after them
- * - Anggota: auto-joins group matching namaPembina (case-insensitive)
- * - Yayasan: admin-only, cannot self-register
+ * Look up a group + its pembina for an invite link.
+ * Accepts the group id (ref) or, for older links, the pembina name.
+ * Returns null when nothing matches.
  */
-function registerSelf(data) {
-  if (!data.email || !data.nama) {
-    return { error: 'Email dan nama diperlukan' };
+function resolveInviteGroup(ref, pembinaName) {
+  var grup = null;
+  if (ref) {
+    grup = getGroupById(String(ref).trim());
+  }
+  if (!grup && pembinaName) {
+    var found = findGroupByPembinaName(pembinaName);
+    if (found) grup = getGroupById(found.grupId);
+  }
+  if (!grup) return null;
+
+  var pembinaNama = grup.nama_grup || '';
+  var gender = '';
+  if (grup.pembina_user_id) {
+    var pembina = getUserById(grup.pembina_user_id);
+    if (pembina && pembina.user) {
+      pembinaNama = pembina.user.nama || pembinaNama;
+      gender = pembina.user.gender || '';
+    }
+  }
+  // Fallback: derive gender from the title in the name
+  if (gender !== 'ikhwan' && gender !== 'akhwat') {
+    gender = /^ustadzah\b|^ustz/i.test(String(pembinaNama).trim()) ? 'akhwat' : 'ikhwan';
   }
 
-  // Check if already registered
+  return {
+    grupId: grup.grup_id,
+    grupNama: grup.nama_grup || pembinaNama,
+    pembinaUserId: grup.pembina_user_id || '',
+    pembinaNama: pembinaNama,
+    gender: gender,
+  };
+}
+
+/**
+ * Public: info shown on the sign-up page when someone opens an invite link.
+ */
+function getInviteInfo(ref, pembinaName) {
+  var info = resolveInviteGroup(ref, pembinaName);
+  if (!info) {
+    return { error: 'Link undangan tidak valid atau grup sudah dihapus. Minta link baru ke pembina Anda.' };
+  }
+  return { invite: info };
+}
+
+/**
+ * Self-registration (Google OAuth or manual with password)
+ * - Pembina: auto-creates a group named after them
+ * - Anggota via invite link (referralCode = grup_id): joins that group, aktif
+ * - Anggota typing a pembina name: joins matching group, pending approval
+ * - Yayasan: admin-only, cannot self-register
+ *
+ * Wrapped in a script lock so a double tap or a client retry cannot
+ * create two rows for the same email.
+ */
+function registerSelf(data) {
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(20000);
+  } catch (e) {
+    return { error: 'Server sedang sibuk. Tunggu sebentar lalu coba lagi.' };
+  }
+  try {
+    return registerSelfUnlocked(data);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function registerSelfUnlocked(data) {
+  if (!data || !data.email || !data.nama) {
+    return { error: 'Email dan nama diperlukan' };
+  }
+  data.email = String(data.email).trim().toLowerCase();
+  data.nama = String(data.nama).trim();
+
+  // Check if already registered (read the sheet, not the cache)
+  CacheService.getScriptCache().remove('user_' + data.email);
   var existing = loginGoogle(data.email);
   if (existing.user) {
+    if (existing.user.status === 'pending') {
+      return { error: 'Email ini sudah terdaftar dan sedang menunggu persetujuan pembina. Tidak perlu daftar ulang, cukup hubungi pembina Anda.' };
+    }
     return { error: 'Email sudah terdaftar. Silakan masuk.' };
   }
 
@@ -240,21 +314,32 @@ function registerSelf(data) {
     var isPending = false;
 
   } else {
-    // === ANGGOTA: Must specify pembina name ===
-    if (!data.namaPembina || !data.namaPembina.trim()) {
-      return { error: 'Nama pembina wajib diisi untuk pendaftaran anggota.' };
-    }
-    var found = findGroupByPembinaName(data.namaPembina);
-    if (found) {
-      grupId = found.grupId;
-      grupNama = found.grupNama;
-    } else {
-      return { error: 'Pembina "' + data.namaPembina.trim() + '" belum terdaftar di sistem. Hubungi admin untuk informasi lebih lanjut.' };
-    }
+    // === ANGGOTA ===
+    var found = null;
+    var isReferral = false;
 
-    // Check if registration uses referral code from pembina
-    // Referral code = grup_id (shared by pembina as invite link)
-    var isReferral = data.referralCode && data.referralCode === grupId;
+    // 1. Invite link: the group id is authoritative, no name matching needed
+    if (data.referralCode) {
+      var invite = resolveInviteGroup(data.referralCode, null);
+      if (!invite) {
+        return { error: 'Link undangan tidak valid atau grup sudah dihapus. Minta link baru ke pembina Anda.' };
+      }
+      found = { grupId: invite.grupId, grupNama: invite.grupNama, pembinaUserId: invite.pembinaUserId };
+      isReferral = true;
+      // Gender follows the pembina so ikhwan/akhwat groups never mix
+      data.gender = invite.gender;
+    } else {
+      // 2. Manual: match by the typed pembina name
+      if (!data.namaPembina || !String(data.namaPembina).trim()) {
+        return { error: 'Nama pembina wajib diisi untuk pendaftaran anggota.' };
+      }
+      found = findGroupByPembinaName(data.namaPembina);
+      if (!found) {
+        return { error: 'Pembina "' + String(data.namaPembina).trim() + '" belum terdaftar di sistem. Periksa ejaan nama, atau minta link undangan ke pembina Anda.' };
+      }
+    }
+    grupId = found.grupId;
+    grupNama = found.grupNama;
 
     if (isReferral) {
       // Referral link → langsung aktif
@@ -303,7 +388,7 @@ function registerSelf(data) {
     data.gender || 'ikhwan',
   ]);
 
-  CacheService.getScriptCache().remove('user_' + data.email);
+  CacheService.getScriptCache().removeAll(['user_' + data.email, 'grup_anggota_' + grupId]);
 
   if (isPending) {
     return {

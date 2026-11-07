@@ -127,6 +127,20 @@ function getMonthlyReport(userId, bulan, tahun) {
     };
   }).sort(function(a, b) { return a.pekan - b.pekan; });
 
+  // Raw weekly data so the client can show real counts (not only %)
+  var weeks = records.map(function(r) {
+    return {
+      pekan: parseInt(r.pekan_ke),
+      tahun: parseInt(r.tahun),
+      tingkatan: r.tingkatan || user.tingkatan || 'muda',
+      tanggal_mulai_pekan: r.tanggal_mulai_pekan,
+      tanggal_submit: r.tanggal_submit,
+      is_terlambat: r.is_terlambat === 1 || r.is_terlambat === '1',
+      persen_rata_rata: parseInt(r.persen_rata_rata) || 0,
+      weekData: parseRecordToWeekData(r)
+    };
+  }).sort(function(a, b) { return a.pekan - b.pekan; });
+
   return {
     user: user,
     bulan: bulan,
@@ -136,7 +150,8 @@ function getMonthlyReport(userId, bulan, tahun) {
     rataRata: rataRata,
     predikat: predikat,
     summary: summary,
-    weekSummaries: weekSummaries
+    weekSummaries: weekSummaries,
+    weeks: weeks
   };
 }
 

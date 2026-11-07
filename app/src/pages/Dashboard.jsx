@@ -2,8 +2,7 @@ import { useAuth } from '../context/AuthContext'
 import { useMutabaah } from '../context/MutabaahContext'
 import { TARGET_AMALAN, getEffectiveTingkatan } from '../config/constants'
 import {
-  CalendarDays, TrendingUp, BookOpen, Users, Moon,
-  Sunrise, HandHeart, Flame, Award, ArrowRight, Star
+  CalendarDays, TrendingUp, BookOpen, Users, Moon, Sunrise, Flame, ArrowRight, Star
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import './Dashboard.css'

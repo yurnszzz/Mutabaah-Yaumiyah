@@ -42,6 +42,9 @@ function doGet(e) {
       case 'getUser':
         result = getUserById(params.userId);
         break;
+      case 'getInviteInfo':
+        result = getInviteInfo(params.ref || '', params.pembina || '');
+        break;
 
       // Mutabaah
       case 'getCurrentWeek':

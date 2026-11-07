@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { TARGET_AMALAN, getEffectiveTingkatan } from '../config/constants'
 import {
   getGrupAnggota as apiGetGrupAnggota,
   getMemberMutabaah as apiGetMemberMutabaah,
   isApiConfigured
 } from '../services/api'
+import { demoHistory } from '../services/demoData'
+import { mapServerRecord, weekGlance, pctColor } from '../utils/mutabaahSummary'
+import WeekDetail from '../components/WeekDetail'
 import {
-  Users, Search, Loader2, Mail, Award, RefreshCw,
-  ChevronRight, ArrowLeft, CalendarDays, ChevronDown, ChevronUp
+  Search, Loader2, Mail, Award, RefreshCw, ChevronRight, ArrowLeft, CalendarDays, ChevronDown, ChevronUp
 } from 'lucide-react'
 import './DashboardAdmin.css'
+import './Laporan.css'
 import './AnggotaGrup.css'
 
 export default function AnggotaGrup() {
@@ -23,11 +25,11 @@ export default function AnggotaGrup() {
   const [selectedMember, setSelectedMember] = useState(null)
   const [memberHistory, setMemberHistory] = useState([])
   const [memberLoading, setMemberLoading] = useState(false)
+  const [memberError, setMemberError] = useState('')
   const [expandedWeek, setExpandedWeek] = useState(null)
 
   const grupId = user?.grup_id
   const grupNama = user?.grup_nama || user?.nama || 'Grup Saya'
-  const tingkatan = 'muda' // fallback, member-specific tingkatan used when available
 
   useEffect(() => { loadMembers() }, [grupId])
 
@@ -55,6 +57,7 @@ export default function AnggotaGrup() {
     setSelectedMember(member)
     setMemberLoading(true)
     setMemberHistory([])
+    setMemberError('')
     setExpandedWeek(null)
 
     try {
@@ -62,39 +65,26 @@ export default function AnggotaGrup() {
         const result = await apiGetMemberMutabaah(
           user.user_id || user.id,
           member.user_id,
-          new Date().getFullYear()
+          new Date().getFullYear(),
+          53,
+          0
         )
-        if (result?.error) {
-          console.error('Permission denied:', result.error)
-          setMemberHistory([])
-        } else if (result?.records) {
-          const formatted = result.records.map(r => ({
-            id: `${r.tahun}-${r.pekan_ke}`,
-            weekInfo: {
-              weekNumber: parseInt(r.pekan_ke),
-              year: parseInt(r.tahun),
-              label: r.tanggal_mulai_pekan ? new Date(r.tanggal_mulai_pekan).toLocaleDateString('id-ID') : '',
-            },
-            percentages: {
-              sholat_fardu: { percentage: parseInt(r.persen_sholat_fardu) || 0, label: 'Sholat Fardu' },
-              shalat_berjamaah: { percentage: parseInt(r.persen_berjamaah) || 0, label: 'Shalat Berjamaah' },
-              sholat_dhuha: { percentage: parseInt(r.persen_sholat_dhuha) || 0, label: 'Sholat Dhuha' },
-              tilawah: { percentage: parseInt(r.persen_tilawah) || 0, label: 'Tilawah' },
-              matsurat: { percentage: parseInt(r.persen_matsurat) || 0, label: 'Al-Matsurat' },
-              shaum: { percentage: parseInt(r.persen_shaum) || 0, label: 'Puasa Sunnah' },
-              qiyamullail: { percentage: parseInt(r.persen_qiyamullail) || 0, label: 'Qiyamullail' },
-              rata_rata: { percentage: parseInt(r.persen_rata_rata) || 0, label: 'Rata-rata' },
-            },
-            submittedAt: r.tanggal_submit,
-            isTerlambat: r.is_terlambat === 1 || r.is_terlambat === '1',
-            editCount: parseInt(r.edit_count) || 0,
-            lastEditedAt: r.last_edited_at || null,
-          }))
+        if (result?.records) {
+          const formatted = result.records.map(r => mapServerRecord(r, member.tingkatan || 'muda'))
           setMemberHistory(formatted)
+          // Open the newest week straight away: that is what pembina usually checks
+          if (formatted[0]) setExpandedWeek(formatted[0].id)
         }
+      } else {
+        // Mode demo: data contoh
+        const formatted = demoHistory(member.user_id, member.tingkatan || 'muda', { gender: member.gender })
+          .map(r => mapServerRecord(r, member.tingkatan || 'muda'))
+        setMemberHistory(formatted)
+        if (formatted[0]) setExpandedWeek(formatted[0].id)
       }
     } catch (err) {
       console.error('Failed to load member detail:', err)
+      setMemberError(err.message || 'Riwayat anggota belum bisa dimuat. Coba lagi.')
     } finally {
       setMemberLoading(false)
     }
@@ -108,19 +98,19 @@ export default function AnggotaGrup() {
 
   // === Detail View ===
   if (selectedMember) {
-    const amalan = Object.keys(TARGET_AMALAN[selectedMember.tingkatan || tingkatan])
+    const memberTingkatan = selectedMember.tingkatan || 'muda'
     return (
       <div className="page-container">
         <div className="page-header">
           <button className="btn btn--outline btn--sm anggota-back" onClick={() => setSelectedMember(null)}>
-            <ArrowLeft size={14} /> Kembali ke Daftar
+            <ArrowLeft size={16} /> Kembali ke Daftar
           </button>
           <h1 className="page-header__title">{selectedMember.nama}</h1>
           <p className="page-header__subtitle">
-            {selectedMember.email} · {selectedMember.tingkatan || '—'}
+            {selectedMember.email} · Tingkatan {memberTingkatan.charAt(0).toUpperCase() + memberTingkatan.slice(1)}
             {selectedMember.streak_current > 0 && (
               <span className="anggota-detail-streak">
-                <Award size={14} /> {selectedMember.streak_current} pekan streak
+                <Award size={14} /> {selectedMember.streak_current} pekan berturut-turut
               </span>
             )}
           </p>
@@ -131,65 +121,77 @@ export default function AnggotaGrup() {
             <Loader2 size={32} className="admin-loading__spinner" />
             <p>Memuat riwayat mutabaah...</p>
           </div>
+        ) : memberError ? (
+          <div className="admin-empty">
+            <p>{memberError}</p>
+            <button className="btn btn--outline btn--sm" onClick={() => openMemberDetail(selectedMember)}>
+              <RefreshCw size={16} /> Coba Lagi
+            </button>
+          </div>
         ) : memberHistory.length === 0 ? (
           <div className="admin-empty">
             <CalendarDays size={32} className="admin-empty__icon" />
-            <p>Belum ada data mutabaah untuk anggota ini</p>
+            <p>Anggota ini belum mengirim mutabaah tahun ini.</p>
           </div>
         ) : (
-          <div className="anggota-history">
-            {memberHistory.map(week => {
-              const pct = week.percentages?.rata_rata?.percentage || 0
-              const colorClass = pct >= 80 ? 'success' : pct >= 50 ? 'warning' : 'danger'
-              const isExpanded = expandedWeek === week.id
+          <>
+            <p className="laporan-count">
+              {memberHistory.length} pekan tercatat tahun ini. Ketuk satu pekan untuk melihat jumlah amalannya.
+            </p>
+            <div className="laporan-list">
+              {memberHistory.map(week => {
+                const pct = week.percentages?.rata_rata?.percentage || 0
+                const colorClass = pctColor(pct)
+                const isExpanded = expandedWeek === week.id
+                const glance = weekGlance(week.weekData, week.tingkatan || memberTingkatan)
+                const detailId = `anggota-detail-${week.id}`
 
-              return (
-                <div key={week.id} className={`card anggota-week ${isExpanded ? 'anggota-week--expanded' : ''}`}>
-                  <div className="anggota-week__summary" onClick={() => setExpandedWeek(isExpanded ? null : week.id)}>
-                    <div className="anggota-week__left">
-                      <CalendarDays size={14} />
-                      <span className="anggota-week__label">Pekan {week.weekInfo.weekNumber}</span>
-                      <span className="anggota-week__date">{week.weekInfo.label || week.weekInfo.year}</span>
-                    </div>
-                    <div className="anggota-week__right">
-                      {week.isTerlambat && <span className="badge badge--warning badge--sm">Terlambat</span>}
-                      <span className={`anggota-week__pct anggota-week__pct--${colorClass}`}>{pct}%</span>
-                      {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                    </div>
+                return (
+                  <div key={week.id} className={`laporan-card card ${isExpanded ? 'laporan-card--expanded' : ''}`}>
+                    <button
+                      type="button"
+                      className="laporan-card__summary"
+                      onClick={() => setExpandedWeek(isExpanded ? null : week.id)}
+                      aria-expanded={isExpanded}
+                      aria-controls={detailId}
+                    >
+                      <div className="laporan-card__summary-left">
+                        <CalendarDays size={18} className="laporan-card__icon" />
+                        <div className="laporan-card__titles">
+                          <span className="laporan-card__week">Pekan {week.weekInfo.weekNumber}</span>
+                          <span className="laporan-card__date-inline">{week.weekInfo.label || week.weekInfo.year}</span>
+                          {glance && <span className="laporan-card__glance">{glance}</span>}
+                        </div>
+                      </div>
+                      <div className="laporan-card__summary-right">
+                        {week.isTerlambat && <span className="badge badge--warning badge--sm">Terlambat</span>}
+                        <span className={`laporan-card__pct laporan-card__pct--${colorClass}`}>{pct}%</span>
+                        {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                      </div>
+                    </button>
+
+                    {isExpanded && (
+                      <div className="laporan-card__detail" id={detailId}>
+                        <WeekDetail
+                          weekData={week.weekData}
+                          tingkatan={week.tingkatan || memberTingkatan}
+                          percentages={week.percentages}
+                        />
+                        <p className="laporan-card__submitted">
+                          Dikirim: {week.submittedAt ? new Date(week.submittedAt).toLocaleString('id-ID') : '-'}
+                          {week.editCount > 0 && (
+                            <span className="laporan-card__edited">
+                              {' '}· Diubah {week.editCount}×{week.lastEditedAt && ` (terakhir ${new Date(week.lastEditedAt).toLocaleString('id-ID')})`}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    )}
                   </div>
-
-                  {isExpanded && (
-                    <div className="anggota-week__detail">
-                      {amalan.map(key => {
-                        const data = week.percentages?.[key]
-                        if (!data) return null
-                        const barColor = data.percentage >= 80 ? 'success' : data.percentage >= 50 ? 'warning' : 'danger'
-                        return (
-                          <div key={key} className="laporan-bar">
-                            <div className="laporan-bar__header">
-                              <span className="laporan-bar__label">{data.label}</span>
-                              <span className={`laporan-bar__pct laporan-bar__pct--${barColor}`}>{data.percentage}%</span>
-                            </div>
-                            <div className="progress" style={{ height: 6 }}>
-                              <div className={`progress__fill progress__fill--${barColor}`} style={{ width: `${data.percentage}%` }} />
-                            </div>
-                          </div>
-                        )
-                      })}
-                      <p className="anggota-week__submitted">
-                        Disubmit: {new Date(week.submittedAt).toLocaleString('id-ID')}
-                        {week.editCount > 0 && (
-                          <span className="laporan-card__edited">
-                            {' '}· Diedit {week.editCount}× (terakhir: {new Date(week.lastEditedAt).toLocaleString('id-ID')})
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          </>
         )}
       </div>
     )

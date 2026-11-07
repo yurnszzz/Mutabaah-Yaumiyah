@@ -6,7 +6,7 @@ import {
   isApiConfigured
 } from '../services/api'
 import {
-  Bell, CheckCheck, Clock, UserCheck, UserX, Info, AlertCircle
+  Bell, CheckCheck, Clock, UserCheck, UserX, Info
 } from 'lucide-react'
 import './NotificationBell.css'
 

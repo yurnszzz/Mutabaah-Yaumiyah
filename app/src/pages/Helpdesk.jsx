@@ -7,8 +7,7 @@ import {
   isApiConfigured
 } from '../services/api'
 import {
-  LifeBuoy, Plus, Loader2, Send, MessageSquare,
-  AlertCircle, CheckCircle, Clock, X, ChevronRight
+  LifeBuoy, Plus, Loader2, Send, MessageSquare, AlertCircle, CheckCircle, Clock, X
 } from 'lucide-react'
 import './Helpdesk.css'
 

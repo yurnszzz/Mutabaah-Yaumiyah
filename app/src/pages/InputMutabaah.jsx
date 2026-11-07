@@ -2,14 +2,10 @@ import { useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useMutabaah } from '../context/MutabaahContext'
 import {
-  HARI, HARI_SHORT, WAKTU_SHALAT, TARGET_AMALAN,
-  KEHADIRAN_OPTIONS, JAMAAH_OPTIONS, HALAMAN_PER_JUZ,
-  getEffectiveTingkatan, getAdjustedTargets, IBADAH_TERDAMPAK_HAID
+  HARI, HARI_SHORT, WAKTU_SHALAT, TARGET_AMALAN, KEHADIRAN_OPTIONS, HALAMAN_PER_JUZ, getEffectiveTingkatan, getAdjustedTargets
 } from '../config/constants'
 import {
-  CalendarDays, BookOpen, Moon, Sunrise, Sun, HandHeart, Clock,
-  Users, ChevronDown, ChevronUp, Check, X, Minus, Send,
-  AlertCircle, Info, Star, Droplet
+  CalendarDays, BookOpen, Moon, Sunrise, HandHeart, Clock, Users, ChevronDown, ChevronUp, Check, X, Minus, Send, Info, Star, Droplet
 } from 'lucide-react'
 import './InputMutabaah.css'
 
@@ -324,7 +320,7 @@ export default function InputMutabaah() {
 
   function handleSubmit(e) {
     e.preventDefault()
-    const record = submitWeek(tingkatan)
+    submitWeek(tingkatan)
     setSubmitted(true)
     setTimeout(() => setSubmitted(false), 3000)
   }

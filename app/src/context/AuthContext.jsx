@@ -11,10 +11,10 @@ const AuthContext = createContext(null)
 
 // Demo user for development (used when GAS_URL is not configured)
 const DEMO_USERS = [
-  { id: 'usr_002', user_id: 'usr_002', nama: 'Ahmad Fauzi', email: 'ahmad@sit-matahari.sch.id', role: 'anggota', tingkatan: 'pratama', grup_id: 'grp_001', grup_nama: 'Al-Fatih' },
-  { id: 'usr_003', user_id: 'usr_003', nama: 'Siti Nurhaliza', email: 'siti@sit-matahari.sch.id', role: 'anggota', tingkatan: 'muda', grup_id: 'grp_001', grup_nama: 'Al-Fatih' },
-  { id: 'usr_001', user_id: 'usr_001', nama: 'Ustadz Hamdan', email: 'ustadz.hamdan@sit-matahari.sch.id', role: 'pembina', tingkatan: null, grup_id: 'grp_001', grup_nama: 'Al-Fatih' },
-  { id: 'usr_004', user_id: 'usr_004', nama: 'Admin Yayasan', email: 'yayasan@sit-matahari.sch.id', role: 'yayasan', tingkatan: null, grup_id: null, grup_nama: null },
+  { id: 'usr_002', user_id: 'usr_002', nama: 'Ahmad Fauzi', email: 'ahmad@sit-matahari.sch.id', role: 'anggota', tingkatan: 'pratama', gender: 'ikhwan', grup_id: 'grp_001', grup_nama: 'Al-Fatih' },
+  { id: 'usr_003', user_id: 'usr_003', nama: 'Siti Nurhaliza', email: 'siti@sit-matahari.sch.id', role: 'anggota', tingkatan: 'muda', gender: 'akhwat', grup_id: 'grp_002', grup_nama: 'Ustadzah Aisyah' },
+  { id: 'usr_001', user_id: 'usr_001', nama: 'Ustadz Hamdan', email: 'ustadz.hamdan@sit-matahari.sch.id', role: 'pembina', tingkatan: null, gender: 'ikhwan', grup_id: 'grp_001', grup_nama: 'Al-Fatih' },
+  { id: 'usr_004', user_id: 'usr_004', nama: 'Admin Yayasan', email: 'yayasan@sit-matahari.sch.id', role: 'yayasan', tingkatan: null, gender: 'ikhwan', grup_id: null, grup_nama: null },
 ]
 
 // Google OAuth Client ID
@@ -122,22 +122,25 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  // Google OAuth callback
-  // If user exists: auto-login. If not: redirect to register form with pre-filled email/name
-  const handleGoogleLogin = useCallback(async (credentialResponse) => {
+  // Google sign-in. Accepts a GIS credential ({ credential }) or a profile
+  // from the OAuth popup ({ email, name }).
+  // If user exists: auto-login. If not: return { unregistered, email, nama }
+  const handleGoogleLogin = useCallback(async (googleResult) => {
     setIsLoading(true)
     setError(null)
     setSuccessMessage(null)
 
     try {
-      const payload = decodeGoogleJwt(credentialResponse.credential)
+      const payload = googleResult?.credential
+        ? decodeGoogleJwt(googleResult.credential)
+        : googleResult
       if (!payload || !payload.email) {
         setError('Gagal membaca data dari Google')
         return
       }
 
-      const email = payload.email
-      const nama = payload.name || payload.email.split('@')[0]
+      const email = String(payload.email).toLowerCase()
+      const nama = payload.name || email.split('@')[0]
 
       // Try login first
       try {

@@ -97,18 +97,21 @@ async function clearCache(keyPrefix) {
 const MAX_RETRIES = 2;  // Reduced from 3
 const RETRY_DELAY_MS = 500; // Reduced from 1000
 
-async function fetchWithRetry(url, options = {}, retries = MAX_RETRIES) {
+async function fetchWithRetry(url, options = {}, retries = MAX_RETRIES, timeoutMs = 15000) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout (was 30s)
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-      const response = await fetch(url, {
-        ...options,
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeout);
+      let response;
+      try {
+        response = await fetch(url, {
+          ...options,
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
 
       if (!response.ok) {
         throw new Error('HTTP ' + response.status + ': ' + response.statusText);
@@ -117,12 +120,20 @@ async function fetchWithRetry(url, options = {}, retries = MAX_RETRIES) {
       const data = await response.json();
 
       if (data.error) {
-        throw new Error(data.error);
+        // The server answered: retrying would only repeat the same answer
+        const serverErr = new Error(data.error);
+        serverErr.fromServer = true;
+        throw serverErr;
       }
 
       return data;
     } catch (err) {
-      if (attempt === retries) throw err;
+      if (err.fromServer || attempt === retries) {
+        if (err.name === 'AbortError') {
+          throw new Error('Server terlalu lama merespons. Periksa koneksi internet lalu coba lagi.');
+        }
+        throw err;
+      }
 
       // Shorter exponential backoff
       const delay = RETRY_DELAY_MS * Math.pow(2, attempt);
@@ -174,7 +185,7 @@ async function apiGet(action, params = {}, cacheKey, cacheTtl) {
 /**
  * POST request to GAS
  */
-async function apiPost(action, data = {}) {
+async function apiPost(action, data = {}, { retries = MAX_RETRIES, timeoutMs = 15000 } = {}) {
   if (!GAS_URL) {
     console.warn('[API] GAS_URL not configured, using mock data');
     return null;
@@ -184,7 +195,7 @@ async function apiPost(action, data = {}) {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify({ action, data }),
-  });
+  }, retries, timeoutMs);
 }
 
 // ============ API Methods ============
@@ -344,6 +355,8 @@ export async function getAllGrupRekap(tahun, pekan) {
  * Self-registration (Google OAuth or manual with password)
  */
 export async function register(email, nama, password, role, tingkatan, namaPembina, gender, referralCode) {
+  // One attempt only: a retry after a slow-but-successful first try would
+  // create a duplicate or report "email sudah terdaftar".
   return apiPost('register', {
     email,
     nama,
@@ -353,7 +366,15 @@ export async function register(email, nama, password, role, tingkatan, namaPembi
     namaPembina: namaPembina || undefined,
     gender: gender || 'ikhwan',
     referralCode: referralCode || undefined,
-  });
+  }, { retries: 0, timeoutMs: 45000 });
+}
+
+/**
+ * Invite link lookup: who invited this person (pembina name, group, gender).
+ * Accepts the group id (ref) or a pembina name from older links.
+ */
+export async function getInviteInfo(ref, pembina) {
+  return apiGet('getInviteInfo', { ref: ref || '', pembina: pembina || '' });
 }
 
 /**

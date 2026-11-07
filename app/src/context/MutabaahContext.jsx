@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react'
-import { HARI, WAKTU_SHALAT, TARGET_AMALAN, HALAMAN_PER_JUZ, getAdjustedTargets, IBADAH_TERDAMPAK_HAID } from '../config/constants'
+import { HARI, WAKTU_SHALAT, TARGET_AMALAN, HALAMAN_PER_JUZ, getAdjustedTargets } from '../config/constants'
 import {
   submitMutabaah as apiSubmit,
   resetWeek as apiReset,
@@ -8,6 +8,7 @@ import {
   isApiConfigured,
 } from '../services/api'
 import { useAuth } from './AuthContext'
+import { mapServerRecord } from '../utils/mutabaahSummary'
 
 const MutabaahContext = createContext(null)
 
@@ -441,29 +442,7 @@ export function MutabaahProvider({ children }) {
       )
 
       if (historyResult && historyResult.records) {
-        const formatted = historyResult.records.map(r => ({
-          id: `${r.tahun}-${r.pekan_ke}`,
-          weekInfo: {
-            weekNumber: parseInt(r.pekan_ke),
-            year: parseInt(r.tahun),
-            label: r.tanggal_mulai_pekan ? new Date(r.tanggal_mulai_pekan).toLocaleDateString('id-ID') : '',
-          },
-          percentages: {
-            sholat_fardu: { percentage: parseInt(r.persen_sholat_fardu) || 0, label: 'Sholat Fardu' },
-            shalat_berjamaah: { percentage: parseInt(r.persen_berjamaah) || 0, label: 'Shalat Berjamaah' },
-            sholat_dhuha: { percentage: parseInt(r.persen_sholat_dhuha) || 0, label: 'Sholat Dhuha' },
-            tilawah: { percentage: parseInt(r.persen_tilawah) || 0, label: 'Tilawah' },
-            matsurat: { percentage: parseInt(r.persen_matsurat) || 0, label: 'Al-Matsurat' },
-            shaum: { percentage: parseInt(r.persen_shaum) || 0, label: 'Puasa Sunnah' },
-            qiyamullail: { percentage: parseInt(r.persen_qiyamullail) || 0, label: 'Qiyamullail' },
-            rata_rata: { percentage: parseInt(r.persen_rata_rata) || 0, label: 'Rata-rata' },
-          },
-          submittedAt: r.tanggal_submit,
-          isTerlambat: r.is_terlambat === 1 || r.is_terlambat === '1',
-          editCount: parseInt(r.edit_count) || 0,
-          lastEditedAt: r.last_edited_at || null,
-          firstSubmittedAt: r.first_submitted_at || r.tanggal_submit,
-        }))
+        const formatted = historyResult.records.map(r => mapServerRecord(r, user.tingkatan || 'muda'))
         setSavedWeeks(formatted)
         localStorage.setItem('mutabaah_saved_weeks', JSON.stringify(formatted))
       }

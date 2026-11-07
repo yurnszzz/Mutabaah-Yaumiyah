@@ -4,8 +4,7 @@ import {
   getUpaNotes, saveUpaNote, deleteUpaNote, isApiConfigured
 } from '../services/api'
 import {
-  StickyNote, Plus, Edit3, Trash2, Pin, PinOff, Search,
-  Loader2, Save, X, ChevronDown, Check, AlertCircle, BookOpen
+  StickyNote, Plus, Edit3, Trash2, Pin, PinOff, Search, Loader2, Save, X, AlertCircle, BookOpen
 } from 'lucide-react'
 import './UpaNotes.css'
 

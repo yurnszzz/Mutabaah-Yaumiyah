@@ -1,15 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
 import {
-  getAllTickets as apiGetAllTickets,
-  getHelpdeskStats as apiGetHelpdeskStats,
-  isApiConfigured
+  getAllTickets as apiGetAllTickets, isApiConfigured
 } from '../services/api'
 import {
-  LifeBuoy, Loader2, MessageSquare, AlertCircle,
-  CheckCircle, Clock, X, ChevronRight, BarChart3,
-  Inbox, User
+  LifeBuoy, Loader2, MessageSquare, AlertCircle, CheckCircle, Clock, X, Inbox, User
 } from 'lucide-react'
 import './Helpdesk.css'
 import './DashboardAdmin.css'
@@ -42,7 +37,6 @@ function formatDate(iso) {
 }
 
 export default function HelpdeskAdmin() {
-  const { user } = useAuth()
   const navigate = useNavigate()
   const [tickets, setTickets] = useState([])
   const [stats, setStats] = useState({ baru: 0, diproses: 0, selesai: 0, ditutup: 0, total: 0 })

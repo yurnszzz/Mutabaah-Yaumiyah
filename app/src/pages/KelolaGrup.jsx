@@ -7,8 +7,7 @@ import {
   apiPost
 } from '../services/api'
 import {
-  LayoutGrid, Users, Search, Loader2, Shield, RefreshCw,
-  Plus, Trash2, Edit3, Eye, X, CheckCircle, UserPlus, UserMinus, ChevronDown, ChevronUp
+  LayoutGrid, Users, Search, Loader2, Shield, RefreshCw, Plus, Trash2, Edit3, Eye, X, CheckCircle, UserPlus, UserMinus
 } from 'lucide-react'
 import './DashboardAdmin.css'
 
@@ -29,9 +28,6 @@ export default function KelolaGrup() {
   // Create/Edit form
   const [formNama, setFormNama] = useState('')
   const [formPembina, setFormPembina] = useState('')
-
-  // Expanded group cards
-  const [expandedGroup, setExpandedGroup] = useState(null)
 
   useEffect(() => { loadData() }, [])
 

@@ -4,11 +4,25 @@ import {
   getMonthlyReport as apiGetMonthlyReport,
   isApiConfigured
 } from '../services/api'
+import { demoMonthlyReport } from '../services/demoData'
 import {
-  FileText, Calendar, Loader2, Printer, ChevronLeft, ChevronRight,
-  Award, TrendingUp
+  FileText, Calendar, Loader2, Printer, ChevronLeft, ChevronRight, Award
 } from 'lucide-react'
+import { summarizeWeeks, formatNumber, pctColor } from '../utils/mutabaahSummary'
 import './RaporBulanan.css'
+
+const KETERANGAN = { success: 'Baik', warning: 'Perlu ditingkatkan', danger: 'Perlu perbaikan' }
+
+// Server summary uses column names; counts use amalan keys
+const SUMMARY_TO_AMALAN = {
+  persen_sholat_fardu: 'sholat_fardu',
+  persen_berjamaah: 'shalat_berjamaah',
+  persen_sholat_dhuha: 'sholat_dhuha',
+  persen_tilawah: 'tilawah',
+  persen_matsurat: 'matsurat',
+  persen_shaum: 'shaum',
+  persen_qiyamullail: 'qiyamullail',
+}
 
 const BULAN_NAMES = [
   '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -40,6 +54,9 @@ export default function RaporBulanan() {
         } else {
           setData(null)
         }
+      } else if (user) {
+        // Mode demo: data contoh
+        setData(demoMonthlyReport(user, bulan, tahun))
       }
     } catch (err) {
       console.error('Failed to load monthly report:', err)
@@ -73,6 +90,13 @@ export default function RaporBulanan() {
 
   const isCurrentOrFuture = tahun > now.getFullYear() ||
     (tahun === now.getFullYear() && bulan > now.getMonth() + 1)
+
+  // Real counts (needs the `weeks` field from the updated backend)
+  const counts = data?.weeks?.length
+    ? summarizeWeeks(data.weeks, data.user?.tingkatan || 'muda')
+    : null
+  const totalsByKey = {}
+  counts?.totals.forEach(t => { totalsByKey[t.key] = t })
 
   return (
     <div className="page-container">
@@ -154,60 +178,117 @@ export default function RaporBulanan() {
             </div>
 
             {/* Score table */}
-            <table className="rapor-table">
-              <thead>
-                <tr>
-                  <th className="rapor-table__th">Amalan</th>
-                  <th className="rapor-table__th rapor-table__th--center">Rata-rata</th>
-                  <th className="rapor-table__th rapor-table__th--center">Keterangan</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.summary && Object.keys(data.summary).map(key => {
-                  const item = data.summary[key]
-                  const avg = item.average
-                  const colorClass = avg >= 80 ? 'success' : avg >= 50 ? 'warning' : 'danger'
-                  return (
-                    <tr key={key}>
-                      <td className="rapor-table__td">{item.label}</td>
-                      <td className={`rapor-table__td rapor-table__td--center rapor-table__td--${colorClass}`}>
-                        {avg}%
-                      </td>
-                      <td className="rapor-table__td rapor-table__td--center">
-                        {avg >= 80 ? '✓ Baik' : avg >= 50 ? '△ Perlu ditingkatkan' : '✗ Perlu perbaikan'}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-              <tfoot>
-                <tr className="rapor-table__footer">
-                  <td className="rapor-table__td"><strong>Rata-rata Keseluruhan</strong></td>
-                  <td className="rapor-table__td rapor-table__td--center"><strong>{data.rataRata}%</strong></td>
-                  <td className="rapor-table__td rapor-table__td--center">
-                    <strong>{data.predikat?.label} ({data.predikat?.level})</strong>
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
+            <div className="rapor-table-wrap">
+              <table className="rapor-table">
+                <thead>
+                  <tr>
+                    <th className="rapor-table__th">Amalan</th>
+                    {counts && <th className="rapor-table__th rapor-table__th--center">Dikerjakan</th>}
+                    <th className="rapor-table__th rapor-table__th--center">Capaian</th>
+                    <th className="rapor-table__th rapor-table__th--center">Keterangan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.summary && Object.keys(data.summary).map(key => {
+                    const item = data.summary[key]
+                    const avg = item.average
+                    const colorClass = pctColor(avg)
+                    const total = totalsByKey[SUMMARY_TO_AMALAN[key] || key]
+                    return (
+                      <tr key={key}>
+                        <td className="rapor-table__td">{item.label}</td>
+                        {counts && (
+                          <td className="rapor-table__td rapor-table__td--center rapor-table__td--count">
+                            {total ? (
+                              <>
+                                <strong>{formatNumber(total.actual)}</strong>
+                                <span> dari {formatNumber(total.target)} {total.unit}</span>
+                              </>
+                            ) : '-'}
+                          </td>
+                        )}
+                        <td className={`rapor-table__td rapor-table__td--center rapor-table__td--${colorClass}`}>
+                          {avg}%
+                        </td>
+                        <td className="rapor-table__td rapor-table__td--center">
+                          {KETERANGAN[colorClass]}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="rapor-table__footer">
+                    <td className="rapor-table__td"><strong>Rata-rata Keseluruhan</strong></td>
+                    {counts && <td className="rapor-table__td" />}
+                    <td className="rapor-table__td rapor-table__td--center"><strong>{data.rataRata}%</strong></td>
+                    <td className="rapor-table__td rapor-table__td--center">
+                      <strong>{data.predikat?.label} ({data.predikat?.level})</strong>
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            {counts && (
+              <p className="rapor-note">
+                Target bulanan = jumlah target tiap pekan yang diisi. Pekan dengan hari haid memakai target yang sudah dikurangi.
+              </p>
+            )}
 
-            {/* Week breakdown */}
-            {data.weekSummaries && data.weekSummaries.length > 0 && (
+            {/* Per-week counts */}
+            {counts && counts.perWeek.length > 0 ? (
+              <div className="rapor-weeks">
+                <h4 className="rapor-weeks__title">Rincian per Pekan</h4>
+                <div className="rapor-table-wrap rapor-table-wrap--bordered">
+                  <table className="rapor-weektable">
+                    <thead>
+                      <tr>
+                        <th scope="col">Amalan</th>
+                        {counts.perWeek.map(w => (
+                          <th key={w.pekan} scope="col">
+                            Pekan {w.pekan}
+                            {w.isTerlambat && <span className="rapor-weektable__late">Terlambat</span>}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {counts.totals.map(t => (
+                        <tr key={t.key}>
+                          <th scope="row">{t.shortLabel}</th>
+                          {counts.perWeek.map(w => {
+                            const row = w.summary.rows.find(r => r.key === t.key)
+                            return (
+                              <td key={w.pekan} className={row ? `is-${pctColor(row.pct)}` : ''}>
+                                {row ? `${formatNumber(row.actual)}/${formatNumber(row.target)}` : '-'}
+                              </td>
+                            )
+                          })}
+                        </tr>
+                      ))}
+                      <tr className="rapor-weektable__avg">
+                        <th scope="row">Rata-rata</th>
+                        {counts.perWeek.map(w => (
+                          <td key={w.pekan} className={`is-${pctColor(w.summary.average)}`}>{w.summary.average}%</td>
+                        ))}
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : data.weekSummaries && data.weekSummaries.length > 0 && (
               <div className="rapor-weeks">
                 <h4 className="rapor-weeks__title">Rekap per Pekan</h4>
                 <div className="rapor-weeks__grid">
-                  {data.weekSummaries.map(w => {
-                    const wColor = w.rata_rata >= 80 ? 'success' : w.rata_rata >= 50 ? 'warning' : 'danger'
-                    return (
-                      <div key={w.pekan} className="rapor-week-chip">
-                        <span className="rapor-week-chip__label">P{w.pekan}</span>
-                        <span className={`rapor-week-chip__value rapor-week-chip__value--${wColor}`}>
-                          {w.rata_rata}%
-                        </span>
-                        {w.is_terlambat && <span className="rapor-week-chip__late">T</span>}
-                      </div>
-                    )
-                  })}
+                  {data.weekSummaries.map(w => (
+                    <div key={w.pekan} className="rapor-week-chip">
+                      <span className="rapor-week-chip__label">Pekan {w.pekan}</span>
+                      <span className={`rapor-week-chip__value rapor-week-chip__value--${pctColor(w.rata_rata)}`}>
+                        {w.rata_rata}%
+                      </span>
+                      {w.is_terlambat && <span className="rapor-week-chip__late">Terlambat</span>}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
